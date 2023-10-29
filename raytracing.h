@@ -36,3 +36,16 @@ typedef struct Ray {
 } Ray;
 
 Vec3 ray_at(Ray ray, float t);
+
+typedef struct HitRecord {
+  Vec3 p;
+  Vec3 normal;
+  float t;
+} HitRecord;
+
+typedef struct Sphere {
+  Vec3 center;
+  float radius;
+} Sphere;
+
+HitRecord hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max);

@@ -1,12 +1,19 @@
 #include "raytracing.h"
 #include "tiff.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 // scene background
-Vec3 ray_color(Ray *ray) {
+Vec3 ray_color(const Ray *ray) {
+  Sphere sphere = {{0.0f, 0.0f, -1.0f}, 0.5f};
+  HitRecord hit_record = hit_sphere(&sphere, ray, 0.0f, 100000.0f);
+  if (hit_record.t > 0.0f) {
+    return vec3_mul(vec3_add(hit_record.normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+  }
+
   Vec3 direction = vec3_unit(ray->direction);
-  float a = 0.5f * (direction.y + 1.0f); // [-1,1] -> [0, 1]
+  float a = 0.5f * (direction.y + 1.0f); // [-1,1] -> [0,1]
 
   Vec3 WHITE = {1.0f, 1.0f, 1.0f};
   Vec3 BLUE = {0.5f, 0.7f, 1.0f};
@@ -15,7 +22,7 @@ Vec3 ray_color(Ray *ray) {
 
 int main(int argc, char *argv[]) {
   float aspect_ratio = 16.0f / 9.0f;
-  int img_width = 256;
+  int img_width = 400;
   int img_height = (int)((float)img_width / aspect_ratio);
 
   float focal_length = 1.0f;
