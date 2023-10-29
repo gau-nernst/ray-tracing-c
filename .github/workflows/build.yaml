@@ -21,4 +21,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cl tiff.c main.c && ./main
+      - run: cl main.c tiff.c && ./main
