@@ -5,7 +5,7 @@ typedef struct Vec3 {
 } Vec3;
 
 // https://stackoverflow.com/a/11763277
-#define EXPAND( x ) x
+#define EXPAND(x) x
 #define _GET_MACRO(_1, _2, _3, FUNC, ...) FUNC
 #define vec3_add2(x, y) _Generic((y), Vec3: vec3vec3_add, float: vec3float_add)(x, y)
 #define vec3_add3(x, y, z) vec3_add2(vec3_add2(x, y), z)
