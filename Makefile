@@ -1,9 +1,10 @@
 CFLAGS += -Wall
+LDLIBS += -lm
 
-OBJECTS = tiff.o main.o
+OBJECTS = tiff.o raytracing.o main.o
 
 main: $(OBJECTS)
-	$(CC) $(OBJECTS) -o $@
+	$(CC) $(OBJECTS) -o $@ $(LDLIBS)
 
 launch: main
 	./main
