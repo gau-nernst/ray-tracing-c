@@ -5,10 +5,9 @@
 #include <stdlib.h>
 
 // scene background
-Vec3 ray_color(const Ray *ray) {
-  Sphere sphere = {{0.0f, 0.0f, -1.0f}, 0.5f};
-  HitRecord hit_record = hit_sphere(&sphere, ray, 0.0f, 100000.0f);
-  if (hit_record.t > 0.0f) {
+Vec3 ray_color(const Ray *ray, const Sphere *spheres, int n) {
+  HitRecord hit_record;
+  if (hit_spheres(spheres, n, ray, 0.0f, 100000.0f, &hit_record)) {
     return vec3_mul(vec3_add(hit_record.normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
   }
 
@@ -24,6 +23,14 @@ int main(int argc, char *argv[]) {
   float aspect_ratio = 16.0f / 9.0f;
   int img_width = 400;
   int img_height = (int)((float)img_width / aspect_ratio);
+
+  Sphere *spheres = malloc(sizeof(Sphere) * 2);
+  if (spheres == NULL) {
+    fprintf(stderr, "Failed to allocate memory.\n");
+    return 1;
+  }
+  spheres[0] = (Sphere){{0.0f, 0.0f, -1.0f}, 0.5f};
+  spheres[1] = (Sphere){{0.0f, -100.5f, -1.0f}, 100.0f};
 
   float focal_length = 1.0f;
   float viewport_height = 2.0f;
@@ -55,7 +62,7 @@ int main(int argc, char *argv[]) {
       Vec3 ray_direction = vec3_sub(pixel_pos, camera_pos);
       Ray ray = {camera_pos, ray_direction};
 
-      Vec3 pixel_color = ray_color(&ray);
+      Vec3 pixel_color = ray_color(&ray, spheres, 2);
 
       image.data[(j * img_width + i) * 3] = (int)(255.999 * pixel_color.x);
       image.data[(j * img_width + i) * 3 + 1] = (int)(255.999 * pixel_color.y);

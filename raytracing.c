@@ -22,6 +22,7 @@ Vec3 *vec3float_mul_(Vec3 *self, float other) {
   return self;
 }
 
+Vec3 vec3_neg(Vec3 u) { return (Vec3){-u.x, -u.y, -u.z}; }
 Vec3 vec3vec3_add(Vec3 u, Vec3 v) { return (Vec3){u.x + v.x, u.y + v.y, u.z + v.z}; }
 Vec3 vec3vec3_sub(Vec3 u, Vec3 v) { return (Vec3){u.x - v.x, u.y - v.y, u.z - v.z}; }
 Vec3 vec3vec3_mul(Vec3 u, Vec3 v) { return (Vec3){u.x * v.x, u.y * v.y, u.z * v.z}; }
@@ -37,9 +38,7 @@ Vec3 vec3_unit(Vec3 u) { return vec3float_mul(u, 1.0f / vec3_length(u)); }
 
 Vec3 ray_at(Ray ray, float t) { return vec3vec3_add(ray.origin, vec3float_mul(ray.direction, t)); }
 
-HitRecord hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max) {
-  HitRecord hit_record = {0};
-
+bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
   float a = vec3_length2(ray->direction);
   float b = vec3_dot(oc, ray->direction);
@@ -47,18 +46,34 @@ HitRecord hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_
   float disc = b * b - a * c;
 
   if (disc < 0)
-    return hit_record;
+    return false;
 
   float disc_sqrt = sqrtf(disc);
   float root = (-b - disc_sqrt) / a;
   if (root <= t_min || root >= t_max) {
     root = (-b + disc_sqrt) / a;
     if (root <= t_min || root >= t_max)
-      return hit_record;
+      return false;
   }
 
-  hit_record.t = root;
-  hit_record.p = ray_at(*ray, root);
-  hit_record.normal = vec3_mul(vec3_sub(hit_record.p, sphere->center), 1.0f / sphere->radius);
-  return hit_record;
+  hit_record->t = root;
+  hit_record->p = ray_at(*ray, root);
+
+  Vec3 outward_normal = vec3_mul(vec3_sub(hit_record->p, sphere->center), 1.0f / sphere->radius);
+  hit_record->front_face = vec3_dot(ray->direction, outward_normal);
+  hit_record->normal = hit_record->front_face ? outward_normal : vec3_neg(outward_normal);
+
+  return true;
+}
+
+bool hit_spheres(const Sphere *spheres, int n, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+  bool hit_anything = false;
+
+  for (int i = 0; i < n; i++)
+    if (hit_sphere(spheres + i, ray, t_min, t_max, hit_record)) {
+      t_max = hit_record->t;
+      hit_anything = true;
+    }
+
+  return hit_anything;
 }

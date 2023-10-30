@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 typedef struct Vec3 {
   float x;
   float y;
@@ -17,6 +19,7 @@ Vec3 *vec3vec3_add_(Vec3 *self, Vec3 other);
 Vec3 *vec3vec3_sub_(Vec3 *self, Vec3 other);
 Vec3 *vec3float_mul_(Vec3 *self, float other);
 
+Vec3 vec3_neg(Vec3 u);
 Vec3 vec3vec3_add(Vec3 u, Vec3 v);
 Vec3 vec3vec3_sub(Vec3 u, Vec3 v);
 Vec3 vec3vec3_mul(Vec3 u, Vec3 v);
@@ -41,6 +44,7 @@ typedef struct HitRecord {
   Vec3 p;
   Vec3 normal;
   float t;
+  bool front_face;
 } HitRecord;
 
 typedef struct Sphere {
@@ -48,4 +52,5 @@ typedef struct Sphere {
   float radius;
 } Sphere;
 
-HitRecord hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max);
+bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+bool hit_spheres(const Sphere *spheres, int n, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
