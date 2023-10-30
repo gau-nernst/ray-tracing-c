@@ -21,4 +21,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cl /Zc:preprocessor /std:c11 /Femain.exe *.c && ./main
+      - run: cl /Zc:preprocessor /std:c11 /DNOMINMAX /Femain.exe *.c && ./main
