@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define min(x, y) ((x) < (y) ? (x) : (y))
+#define max(x, y) ((x) > (y) ? (x) : (y))
+#define clamp(x, lo, hi) min(max(x, lo), hi)
+
 // scene background
 Vec3 ray_color(const Ray *ray, const Sphere *spheres, int n) {
   HitRecord hit_record;
@@ -32,6 +36,7 @@ int main(int argc, char *argv[]) {
   spheres[0] = (Sphere){{0.0f, 0.0f, -1.0f}, 0.5f};
   spheres[1] = (Sphere){{0.0f, -100.5f, -1.0f}, 100.0f};
 
+  int samples_per_pixel = 10;
   float focal_length = 1.0f;
   float viewport_height = 2.0f;
   float viewport_width = viewport_height * (float)img_width / (float)img_height;
@@ -45,7 +50,7 @@ int main(int argc, char *argv[]) {
 
   Vec3 camera_direction = {0.0f, 0.0f, focal_length};
   Vec3 viewport_upper_left =
-      vec3_sub(camera_pos, vec3_add(camera_direction, vec3_mul(viewport_u, 0.5f), vec3_mul(viewport_v, 0.5f)));
+      vec3_add(camera_pos, vec3_neg(camera_direction), vec3_mul(viewport_u, -0.5f), vec3_mul(viewport_v, -0.5f));
   Vec3 pixel00_pos = vec3_add(viewport_upper_left, vec3_mul(pixel_delta_u, 0.5f), vec3_mul(pixel_delta_v, 0.5f));
 
   Image8 image = {img_width, img_height, 3, malloc(img_width * img_height * 3)};
@@ -54,19 +59,31 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  PCG32State pcg32_state;
+  pcg32_srandom_r(&pcg32_state, 10, 20);
+
   for (int j = 0; j < img_height; j++) {
     fprintf(stderr, "\rScanlines remaining: %d", img_height - j);
 
     for (int i = 0; i < img_width; i++) {
       Vec3 pixel_pos = vec3_add(pixel00_pos, vec3_mul(pixel_delta_u, (float)i), vec3_mul(pixel_delta_v, (float)j));
-      Vec3 ray_direction = vec3_sub(pixel_pos, camera_pos);
-      Ray ray = {camera_pos, ray_direction};
+      Vec3 pixel_color = {0.0f, 0.0f, 0.0f};
 
-      Vec3 pixel_color = ray_color(&ray, spheres, 2);
+      for (int sample = 0; sample < samples_per_pixel; sample++) {
+        // square sample
+        // TODO: use 64-bit PRNG to generate 2 numbers at once
+        float px = pcg32_randomf_r(&pcg32_state) - 0.5f;
+        float py = pcg32_randomf_r(&pcg32_state) - 0.5f;
+        Vec3 ray_direction =
+            vec3_add(pixel_pos, vec3_mul(pixel_delta_u, px), vec3_mul(pixel_delta_v, py), vec3_neg(camera_pos));
+        Ray ray = {camera_pos, ray_direction};
+        pixel_color = vec3_add(pixel_color, ray_color(&ray, spheres, 2));
+      }
 
-      image.data[(j * img_width + i) * 3] = (int)(255.999 * pixel_color.x);
-      image.data[(j * img_width + i) * 3 + 1] = (int)(255.999 * pixel_color.y);
-      image.data[(j * img_width + i) * 3 + 2] = (int)(255.999 * pixel_color.z);
+      pixel_color = vec3_mul(pixel_color, 1.0f / (float)samples_per_pixel);
+      image.data[(j * img_width + i) * 3] = (int)(256.0f * clamp(pixel_color.x, 0.0f, 0.999f));
+      image.data[(j * img_width + i) * 3 + 1] = (int)(256.0f * clamp(pixel_color.y, 0.0f, 0.999f));
+      image.data[(j * img_width + i) * 3 + 2] = (int)(256.0f * clamp(pixel_color.z, 0.0f, 0.999f));
     }
   }
   fprintf(stderr, "\nDone\n");
