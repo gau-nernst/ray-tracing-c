@@ -6,3 +6,16 @@ Other Ray Tracing in One Weekend repos:
 
 - https://github.com/gau-nernst/ray-tracing-numba
 - https://github.com/gau-nernst/ray-tracing-rust
+
+On Linux and macOS
+
+```bash
+make launch
+```
+
+On Windows
+
+```
+cl /Zc:preprocessor /std:c11 /O2 /fp:fast /Femain.exe *.c
+./main
+```
