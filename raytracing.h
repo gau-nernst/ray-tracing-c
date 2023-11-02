@@ -65,3 +65,7 @@ typedef struct PCG32State {
 void pcg32_srandom_r(PCG32State *rng, uint64_t initstate, uint64_t initseq);
 uint32_t pcg32_random_r(PCG32State *rng);
 float pcg32_randomf_r(PCG32State *rng);
+
+Vec3 vec3_rand(PCG32State *rng);
+Vec3 vec3_rand_unit_vector(PCG32State *rng);
+Vec3 vec3_rand_hemisphere(Vec3 normal, PCG32State *rng);

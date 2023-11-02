@@ -13,10 +13,16 @@
 #define clamp(x, lo, hi) min(max(x, lo), hi)
 
 // scene background
-Vec3 ray_color(const Ray *ray, const Sphere *spheres, int n) {
+Vec3 ray_color(const Ray *ray, const Sphere *spheres, int n, int depth, PCG32State *rng) {
+  if (depth <= 0)
+    return (Vec3){0.0f, 0.0f, 0.0f};
+
   HitRecord hit_record;
-  if (hit_spheres(spheres, n, ray, 0.0f, 100000.0f, &hit_record)) {
-    return vec3_mul(vec3_add(hit_record.normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+  if (hit_spheres(spheres, n, ray, 1e-3f, INFINITY, &hit_record)) {
+    // return vec3_mul(vec3_add(hit_record.normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+
+    Ray new_ray = {hit_record.p, vec3_rand_hemisphere(hit_record.normal, rng)};
+    return vec3_mul(ray_color(&new_ray, spheres, n, depth - 1, rng), 0.5f); // reflect 50% light
   }
 
   Vec3 direction = vec3_unit(ray->direction);
@@ -40,7 +46,8 @@ int main(int argc, char *argv[]) {
   spheres[0] = (Sphere){{0.0f, 0.0f, -1.0f}, 0.5f};
   spheres[1] = (Sphere){{0.0f, -100.5f, -1.0f}, 100.0f};
 
-  int samples_per_pixel = 10;
+  int samples_per_pixel = 100;
+  int max_depth = 10;
   float focal_length = 1.0f;
   float viewport_height = 2.0f;
   float viewport_width = viewport_height * (float)img_width / (float)img_height;
@@ -63,8 +70,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  PCG32State pcg32_state;
-  pcg32_srandom_r(&pcg32_state, 10, 20);
+  PCG32State rng;
+  pcg32_srandom_r(&rng, 10, 20);
 
   for (int j = 0; j < img_height; j++) {
     fprintf(stderr, "\rScanlines remaining: %d", img_height - j);
@@ -74,14 +81,15 @@ int main(int argc, char *argv[]) {
       Vec3 pixel_color = {0.0f, 0.0f, 0.0f};
 
       for (int sample = 0; sample < samples_per_pixel; sample++) {
-        // square sample
+        // square sampling
+        // another option: sinc sampling
         // TODO: use 64-bit PRNG to generate 2 numbers at once
-        float px = pcg32_randomf_r(&pcg32_state) - 0.5f;
-        float py = pcg32_randomf_r(&pcg32_state) - 0.5f;
+        float px = pcg32_randomf_r(&rng) - 0.5f;
+        float py = pcg32_randomf_r(&rng) - 0.5f;
         Vec3 ray_direction =
             vec3_add(pixel_pos, vec3_mul(pixel_delta_u, px), vec3_mul(pixel_delta_v, py), vec3_neg(camera_pos));
         Ray ray = {camera_pos, ray_direction};
-        pixel_color = vec3_add(pixel_color, ray_color(&ray, spheres, 2));
+        pixel_color = vec3_add(pixel_color, ray_color(&ray, spheres, 2, max_depth, &rng));
       }
 
       pixel_color = vec3_mul(pixel_color, 1.0f / (float)samples_per_pixel);

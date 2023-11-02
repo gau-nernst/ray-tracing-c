@@ -96,3 +96,17 @@ uint32_t pcg32_random_r(PCG32State *rng) {
 }
 
 float pcg32_randomf_r(PCG32State *rng) { return (pcg32_random_r(rng) >> 8) * (1.0f / 16777216.0f); }
+
+Vec3 vec3_rand(PCG32State *rng) { return (Vec3){pcg32_randomf_r(rng), pcg32_randomf_r(rng), pcg32_randomf_r(rng)}; };
+Vec3 vec3_rand_unit_vector(PCG32State *rng) {
+  for (;;) {
+    Vec3 v = vec3_rand(rng);
+    float length2 = vec3_length2(v);
+    if (length2 < 1)
+      return vec3float_mul(v, 1.0f / sqrtf(length2));
+  }
+}
+Vec3 vec3_rand_hemisphere(Vec3 normal, PCG32State *rng) {
+  Vec3 v = vec3_rand_unit_vector(rng);
+  return (vec3_dot(v, normal) > 0.0f) ? v : vec3_neg(v);
+}
