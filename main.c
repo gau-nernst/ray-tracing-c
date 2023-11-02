@@ -13,16 +13,25 @@
 #define clamp(x, lo, hi) min(max(x, lo), hi)
 
 // scene background
-Vec3 ray_color(const Ray *ray, const Sphere *spheres, int n, int depth, PCG32State *rng) {
+Vec3 ray_color(const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (depth <= 0)
     return (Vec3){0.0f, 0.0f, 0.0f};
 
   HitRecord hit_record;
-  if (hit_spheres(spheres, n, ray, 1e-3f, INFINITY, &hit_record)) {
-    // return vec3_mul(vec3_add(hit_record.normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+  if (hit_spheres(world, ray, 1e-3f, INFINITY, &hit_record)) {
+    Ray new_ray;
+    Vec3 color;
+    new_ray.origin = hit_record.p;
 
-    Ray new_ray = {hit_record.p, vec3_rand_hemisphere(hit_record.normal, rng)};
-    return vec3_mul(ray_color(&new_ray, spheres, n, depth - 1, rng), 0.5f); // reflect 50% light
+    if (hit_record.material_id >= world->n_materials) {
+      fprintf(stderr, "Index out of bounds");
+      return (Vec3){0.0f, 0.0f, 0.0f};
+    }
+    Material *material = world->materials + hit_record.material_id;
+    if (scatter(material, ray->direction, hit_record.normal, rng, &new_ray.direction, &color))
+      return vec3_mul(ray_color(&new_ray, world, depth - 1, rng), color); // reflect 50% light
+    else
+      return color;
   }
 
   Vec3 direction = vec3_unit(ray->direction);
@@ -38,13 +47,24 @@ int main(int argc, char *argv[]) {
   int img_width = 400;
   int img_height = (int)((float)img_width / aspect_ratio);
 
-  Sphere *spheres = malloc(sizeof(Sphere) * 2);
-  if (spheres == NULL) {
+  World world;
+  world.n_spheres = 2;
+  world.spheres = malloc(sizeof(Sphere) * world.n_spheres);
+  if (world.spheres == NULL) {
     fprintf(stderr, "Failed to allocate memory.\n");
     return 1;
   }
-  spheres[0] = (Sphere){{0.0f, 0.0f, -1.0f}, 0.5f};
-  spheres[1] = (Sphere){{0.0f, -100.5f, -1.0f}, 100.0f};
+  world.spheres[0] = (Sphere){{0.0f, -100.5f, -1.0f}, 100.0f, 0};
+  world.spheres[1] = (Sphere){{0.0f, 0.0f, -1.0f}, 0.5f, 1};
+
+  world.n_materials = 2;
+  world.materials = malloc(sizeof(Material) * world.n_materials);
+  if (world.materials == NULL) {
+    fprintf(stderr, "Failed to allocate memory.\n");
+    return 1;
+  }
+  world.materials[0] = (Material){LAMBERTIAN, {0.2f, 0.2, 0.2f}};
+  world.materials[1] = (Material){NORMAL, {0.2f, 0.2, 0.2f}};
 
   int samples_per_pixel = 100;
   int max_depth = 10;
@@ -89,13 +109,13 @@ int main(int argc, char *argv[]) {
         Vec3 ray_direction =
             vec3_add(pixel_pos, vec3_mul(pixel_delta_u, px), vec3_mul(pixel_delta_v, py), vec3_neg(camera_pos));
         Ray ray = {camera_pos, ray_direction};
-        pixel_color = vec3_add(pixel_color, ray_color(&ray, spheres, 2, max_depth, &rng));
+        pixel_color = vec3_add(pixel_color, ray_color(&ray, &world, max_depth, &rng));
       }
 
       pixel_color = vec3_mul(pixel_color, 1.0f / (float)samples_per_pixel);
-      image.data[(j * img_width + i) * 3] = (int)(256.0f * clamp(pixel_color.x, 0.0f, 0.999f));
-      image.data[(j * img_width + i) * 3 + 1] = (int)(256.0f * clamp(pixel_color.y, 0.0f, 0.999f));
-      image.data[(j * img_width + i) * 3 + 2] = (int)(256.0f * clamp(pixel_color.z, 0.0f, 0.999f));
+      image.data[(j * img_width + i) * 3] = (int)(256.0f * clamp(sqrtf(pixel_color.x), 0.0f, 0.999f));
+      image.data[(j * img_width + i) * 3 + 1] = (int)(256.0f * clamp(sqrtf(pixel_color.y), 0.0f, 0.999f));
+      image.data[(j * img_width + i) * 3 + 2] = (int)(256.0f * clamp(sqrtf(pixel_color.z), 0.0f, 0.999f));
     }
   }
   fprintf(stderr, "\nDone\n");
