@@ -1,4 +1,4 @@
-CFLAGS += -Wall
+CFLAGS += -Wall -O3 -Ofast
 LDLIBS += -lm
 
 OBJECTS = tiff.o raytracing.o main.o
