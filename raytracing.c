@@ -1,4 +1,5 @@
 #include "raytracing.h"
+#define _USE_MATH_DEFINES // for MSVC
 #include <math.h>
 #include <stdio.h>
 
@@ -6,6 +7,7 @@ Vec3 vec3_neg(Vec3 u) { return (Vec3){-u.x, -u.y, -u.z}; }
 Vec3 vec3vec3_add(Vec3 u, Vec3 v) { return (Vec3){u.x + v.x, u.y + v.y, u.z + v.z}; }
 Vec3 vec3vec3_sub(Vec3 u, Vec3 v) { return (Vec3){u.x - v.x, u.y - v.y, u.z - v.z}; }
 Vec3 vec3vec3_mul(Vec3 u, Vec3 v) { return (Vec3){u.x * v.x, u.y * v.y, u.z * v.z}; }
+Vec3 vec3vec3_div(Vec3 u, Vec3 v) { return (Vec3){u.x / v.x, u.y / v.y, u.z / v.z}; }
 Vec3 vec3float_add(Vec3 u, float v) { return (Vec3){u.x + v, u.y + v, u.z + v}; }
 Vec3 vec3float_sub(Vec3 u, float v) { return (Vec3){u.x - v, u.y - v, u.z - v}; }
 Vec3 vec3float_mul(Vec3 u, float v) { return (Vec3){u.x * v, u.y * v, u.z * v}; }
@@ -16,7 +18,7 @@ float vec3_length2(Vec3 u) { return vec3_dot(u, u); }
 float vec3_length(Vec3 u) { return sqrtf(vec3_length2(u)); }
 float vec3_dot(Vec3 u, Vec3 v) { return u.x * v.x + u.y * v.y + u.z * v.z; }
 Vec3 vec3_cross(Vec3 u, Vec3 v) { return (Vec3){u.y * v.z - v.y * u.z, u.z * v.x - v.z * u.x, u.x * v.y - v.x * u.y}; }
-Vec3 vec3_unit(Vec3 u) { return vec3float_mul(u, 1.0f / vec3_length(u)); }
+Vec3 vec3_unit(Vec3 u) { return vec3float_div(u, vec3_length(u)); }
 bool vec3_near_zero(Vec3 u) { return (fabsf(u.x) < 1e-8f) && (fabsf(u.y) < 1e-8f) && (fabsf(u.z) < 1e-8f); }
 
 Vec3 ray_at(Ray ray, float t) { return vec3vec3_add(ray.origin, vec3float_mul(ray.direction, t)); }
@@ -42,7 +44,7 @@ bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, 
   hit_record->t = root;
   hit_record->p = ray_at(*ray, root);
 
-  Vec3 outward_normal = vec3_mul(vec3_sub(hit_record->p, sphere->center), 1.0f / sphere->radius);
+  Vec3 outward_normal = vec3_div(vec3_sub(hit_record->p, sphere->center), sphere->radius);
   hit_record->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
   hit_record->normal = hit_record->front_face ? outward_normal : vec3_neg(outward_normal);
   hit_record->material = sphere->material;
@@ -79,15 +81,18 @@ uint32_t pcg32_random_r(PCG32State *rng) {
   return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
 
-float pcg32_randomf_r(PCG32State *rng) { return (pcg32_random_r(rng) >> 8) * (1.0f / 16777216.0f); }
+float pcg32_randomf_r(PCG32State *rng) { return (pcg32_random_r(rng) >> 8) / 16777216.0f; }
 
-Vec3 vec3_rand(PCG32State *rng) { return (Vec3){pcg32_randomf_r(rng), pcg32_randomf_r(rng), pcg32_randomf_r(rng)}; };
+Vec3 vec3_rand(PCG32State *rng) { return (Vec3){pcg32_randomf_r(rng), pcg32_randomf_r(rng), pcg32_randomf_r(rng)}; }
+Vec3 vec3_rand_between(float low, float high, PCG32State *rng) {
+  return vec3_add(vec3_mul(vec3_rand(rng), high - low), low);
+}
 Vec3 vec3_rand_unit_vector(PCG32State *rng) {
   for (;;) {
-    Vec3 v = vec3_rand(rng);
+    Vec3 v = vec3_rand_between(-1.0f, 1.0f, rng);
     float length2 = vec3_length2(v);
     if (length2 < 1)
-      return vec3float_mul(v, 1.0f / sqrtf(length2));
+      return vec3_div(v, sqrtf(length2));
   }
 }
 Vec3 vec3_rand_hemisphere(Vec3 normal, PCG32State *rng) {
@@ -96,12 +101,12 @@ Vec3 vec3_rand_hemisphere(Vec3 normal, PCG32State *rng) {
 }
 
 bool scatter_normal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  *color = vec3float_mul(vec3float_add(hit_record->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+  *color = vec3float_mul(vec3_add(hit_record->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
   return false;
 }
 
 bool scatter_lambertian(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  Vec3 new_direction = vec3vec3_add(hit_record->normal, vec3_rand_unit_vector(rng));
+  Vec3 new_direction = vec3_add(hit_record->normal, vec3_rand_unit_vector(rng));
   if (vec3_near_zero(new_direction))
     new_direction = hit_record->normal;
   *scattered = new_direction;
@@ -110,12 +115,12 @@ bool scatter_lambertian(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
 }
 
 Vec3 reflect(Vec3 incident, Vec3 normal) {
-  return vec3vec3_sub(incident, vec3float_mul(normal, 2.0f * vec3_dot(incident, normal)));
+  return vec3_sub(incident, vec3_mul(normal, 2.0f * vec3_dot(incident, normal)));
 }
 
 bool scatter_metal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  *scattered = vec3vec3_add(reflect(incident, hit_record->normal),
-                            vec3float_mul(vec3_rand_unit_vector(rng), hit_record->material->metal_fuzz));
+  *scattered = vec3_add(reflect(incident, hit_record->normal),
+                        vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->metal_fuzz));
   *color = hit_record->material->albedo;
   return vec3_dot(*scattered, hit_record->normal) > 0; // check for degeneration
 }
@@ -135,9 +140,9 @@ bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
   if (eta * sin_theta > 1.0f || schlick_r > pcg32_randomf_r(rng)) {
     *scattered = reflect(incident, hit_record->normal);
   } else {
-    Vec3 r_perp = vec3float_mul(vec3vec3_add(incident, vec3float_mul(hit_record->normal, cos_theta)), eta);
-    Vec3 r_para = vec3float_mul(hit_record->normal, -sqrtf(fabsf(1.0f - vec3_length2(r_perp))));
-    *scattered = vec3vec3_add(r_perp, r_para);
+    Vec3 r_perp = vec3_mul(vec3_add(incident, vec3_mul(hit_record->normal, cos_theta)), eta);
+    Vec3 r_para = vec3_mul(hit_record->normal, -sqrtf(fabsf(1.0f - vec3_length2(r_perp))));
+    *scattered = vec3_add(r_perp, r_para);
   }
   *color = hit_record->material->albedo;
   return true;
@@ -163,28 +168,30 @@ bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scatte
   }
 }
 
-void camera_init(Camera *camera, float aspect_ratio, int img_width, int samples_per_pixel, int max_depth) {
-  camera->aspect_ratio = aspect_ratio;
-  camera->img_width = img_width;
-  camera->img_height = (int)((float)img_width / aspect_ratio);
-  camera->samples_per_pixel = samples_per_pixel;
-  camera->max_depth = max_depth;
-  camera->position = (Vec3){0.0f, 0.0f, 0.0f};
+void camera_init(Camera *camera) {
+  camera->img_height = (int)((float)camera->img_width / camera->aspect_ratio);
 
-  float focal_length = 1.0f;
-  float viewport_height = 2.0f;
-  float viewport_width = viewport_height * (float)img_width / (float)camera->img_height;
-  Vec3 viewport_u = {viewport_width, 0.0f, 0.0f};   // scan from left to right
-  Vec3 viewport_v = {0.0f, -viewport_height, 0.0f}; // scan from top to bottom
+  float viewport_height = 2.0 * tanf(camera->vfov * M_PI / 360.0f) * camera->focal_length;
+  float viewport_width = viewport_height * (float)camera->img_width / (float)camera->img_height;
 
-  camera->pixel_delta_u = vec3float_div(viewport_u, (float)img_width);
-  camera->pixel_delta_v = vec3float_div(viewport_v, (float)camera->img_height);
+  camera->w = vec3_unit(vec3_sub(camera->look_from, camera->look_to));
+  camera->u = vec3_cross(camera->vup, camera->w);
+  camera->v = vec3_cross(camera->w, camera->u);
 
-  Vec3 camera_direction = {0.0f, 0.0f, focal_length};
-  Vec3 viewport_upper_left = vec3_add(camera->position, vec3_neg(camera_direction), vec3float_mul(viewport_u, -0.5f),
-                                      vec3float_mul(viewport_v, -0.5f));
-  camera->pixel00_loc = vec3_add(viewport_upper_left, vec3float_mul(camera->pixel_delta_u, 0.5f),
-                                 vec3float_mul(camera->pixel_delta_v, 0.5f));
+  Vec3 viewport_u = vec3_mul(camera->u, viewport_width);   // scan from left to right
+  Vec3 viewport_v = vec3_mul(camera->v, -viewport_height); // scan from top to bottom
+
+  camera->pixel_delta_u = vec3_div(viewport_u, (float)camera->img_width);
+  camera->pixel_delta_v = vec3_div(viewport_v, (float)camera->img_height);
+
+  Vec3 viewport_upper_left = vec3_add(camera->look_from, vec3_mul(camera->w, -camera->focal_length),
+                                      vec3_mul(viewport_u, -0.5f), vec3_mul(viewport_v, -0.5f));
+  camera->pixel00_loc =
+      vec3_add(viewport_upper_left, vec3_mul(camera->pixel_delta_u, 0.5f), vec3_mul(camera->pixel_delta_v, 0.5f));
+
+  float dof_radius = camera->focal_length * tanf(camera->dof_angle * M_PI / 360.0f);
+  camera->dof_disc_u = vec3_mul(camera->u, dof_radius);
+  camera->dof_disc_v = vec3_mul(camera->v, dof_radius);
 }
 
 Vec3 ray_color(const Ray *ray, const World *world, int depth, PCG32State *rng) {
@@ -229,13 +236,28 @@ void camera_render(Camera *camera, World *world, uint8_t *buffer) {
         // TODO: use 64-bit PRNG to generate 2 numbers at once
         float px = pcg32_randomf_r(&rng) - 0.5f;
         float py = pcg32_randomf_r(&rng) - 0.5f;
-        Vec3 ray_direction = vec3_add(pixel_pos, vec3_mul(camera->pixel_delta_u, px),
-                                      vec3_mul(camera->pixel_delta_v, py), vec3_neg(camera->position));
-        Ray ray = {camera->position, ray_direction};
+
+        Ray ray;
+        if (camera->dof_angle > 0.0f) {
+          // sample points around camera.look_from like a (thin) lens/aperture
+          float a, b;
+          for (;;) {
+            a = pcg32_randomf_r(&rng) * 2.0f - 1.0f;
+            b = pcg32_randomf_r(&rng) * 2.0f - 1.0f;
+            if (a * a + b * b < 1.0f)
+              break;
+          }
+          ray.origin = vec3_add(camera->look_from, vec3_mul(camera->dof_disc_u, a), vec3_mul(camera->dof_disc_v, b));
+        } else {
+          ray.origin = camera->look_from;
+        }
+        ray.direction = vec3_add(pixel_pos, vec3_mul(camera->pixel_delta_u, px), vec3_mul(camera->pixel_delta_v, py),
+                                 vec3_neg(ray.origin));
+
         pixel_color = vec3_add(pixel_color, ray_color(&ray, world, camera->max_depth, &rng));
       }
 
-      pixel_color = vec3float_div(pixel_color, (float)camera->samples_per_pixel);
+      pixel_color = vec3_div(pixel_color, (float)camera->samples_per_pixel);
       buffer[(j * camera->img_width + i) * 3] = (int)(256.0f * clamp(sqrtf(pixel_color.x), 0.0f, 0.999f));
       buffer[(j * camera->img_width + i) * 3 + 1] = (int)(256.0f * clamp(sqrtf(pixel_color.y), 0.0f, 0.999f));
       buffer[(j * camera->img_width + i) * 3 + 2] = (int)(256.0f * clamp(sqrtf(pixel_color.z), 0.0f, 0.999f));

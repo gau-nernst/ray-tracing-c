@@ -29,6 +29,7 @@ typedef struct Camera Camera;
 
 #define vec3_sub(x, y) _Generic((y), Vec3: vec3vec3_sub, float: vec3float_sub)(x, y)
 #define vec3_mul(x, y) _Generic((y), Vec3: vec3vec3_mul, float: vec3float_mul)(x, y)
+#define vec3_div(x, y) _Generic((y), Vec3: vec3vec3_div, float: vec3float_div)(x, y)
 
 struct Vec3 {
   float x;
@@ -40,6 +41,7 @@ Vec3 vec3_neg(Vec3 u);
 Vec3 vec3vec3_add(Vec3 u, Vec3 v);
 Vec3 vec3vec3_sub(Vec3 u, Vec3 v);
 Vec3 vec3vec3_mul(Vec3 u, Vec3 v);
+Vec3 vec3vec3_div(Vec3 u, Vec3 v);
 Vec3 vec3float_add(Vec3 u, float v);
 Vec3 vec3float_sub(Vec3 u, float v);
 Vec3 vec3float_mul(Vec3 u, float v);
@@ -54,6 +56,7 @@ Vec3 vec3_unit(Vec3 u);
 bool vec3_near_zero(Vec3 u);
 
 Vec3 vec3_rand(PCG32State *rng);
+Vec3 vec3_rand_between(float low, float high, PCG32State *rng);
 Vec3 vec3_rand_unit_vector(PCG32State *rng);
 Vec3 vec3_rand_hemisphere(Vec3 normal, PCG32State *rng);
 
@@ -118,11 +121,19 @@ struct Camera {
   int img_height;
   int samples_per_pixel;
   int max_depth;
-  Vec3 position;
+  float vfov;
+  Vec3 look_from;
+  Vec3 look_to;
+  Vec3 vup;
+  float dof_angle;
+  float focal_length;
   Vec3 pixel00_loc;
   Vec3 pixel_delta_u;
   Vec3 pixel_delta_v;
+  Vec3 u, v, w; // camera basis vectors
+  Vec3 dof_disc_u;
+  Vec3 dof_disc_v;
 };
 
-void camera_init(Camera *camera, float aspect_ratio, int img_width, int samples_per_pixel, int max_depth);
+void camera_init(Camera *camera);
 void camera_render(Camera *camera, World *world, uint8_t *buffer);
