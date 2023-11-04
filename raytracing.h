@@ -2,6 +2,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifndef min
+#define min(x, y) ((x) < (y) ? (x) : (y))
+#endif
+#ifndef max
+#define max(x, y) ((x) > (y) ? (x) : (y))
+#endif
+#define clamp(x, lo, hi) min(max(x, lo), hi)
+
 typedef struct PCG32State PCG32State;
 typedef struct Vec3 Vec3;
 typedef struct Ray Ray;
@@ -10,6 +18,7 @@ typedef struct Sphere Sphere;
 typedef enum MaterialType MaterialType;
 typedef struct Material Material;
 typedef struct World World;
+typedef struct Camera Camera;
 
 // https://stackoverflow.com/a/11763277
 #define _GET_MACRO(_1, _2, _3, _4, FUNC, ...) FUNC
@@ -34,6 +43,8 @@ Vec3 vec3vec3_mul(Vec3 u, Vec3 v);
 Vec3 vec3float_add(Vec3 u, float v);
 Vec3 vec3float_sub(Vec3 u, float v);
 Vec3 vec3float_mul(Vec3 u, float v);
+Vec3 vec3float_div(Vec3 u, float v);
+Vec3 vec3_lerp(Vec3 a, Vec3 b, float w);
 
 float vec3_length2(Vec3 u);
 float vec3_length(Vec3 u);
@@ -100,3 +111,18 @@ struct PCG32State {
 void pcg32_srandom_r(PCG32State *rng, uint64_t initstate, uint64_t initseq);
 uint32_t pcg32_random_r(PCG32State *rng);
 float pcg32_randomf_r(PCG32State *rng);
+
+struct Camera {
+  float aspect_ratio;
+  int img_width;
+  int img_height;
+  int samples_per_pixel;
+  int max_depth;
+  Vec3 position;
+  Vec3 pixel00_loc;
+  Vec3 pixel_delta_u;
+  Vec3 pixel_delta_v;
+};
+
+void camera_init(Camera *camera, float aspect_ratio, int img_width, int samples_per_pixel, int max_depth);
+void camera_render(Camera *camera, World *world, uint8_t *buffer);

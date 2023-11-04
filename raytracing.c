@@ -1,26 +1,6 @@
 #include "raytracing.h"
 #include <math.h>
-
-Vec3 *vec3vec3_add_(Vec3 *self, Vec3 other) {
-  self->x += other.x;
-  self->y += other.y;
-  self->z += other.z;
-  return self;
-}
-
-Vec3 *vec3vec3_sub_(Vec3 *self, Vec3 other) {
-  self->x -= other.x;
-  self->y -= other.y;
-  self->z -= other.z;
-  return self;
-}
-
-Vec3 *vec3float_mul_(Vec3 *self, float other) {
-  self->x *= other;
-  self->y *= other;
-  self->z *= other;
-  return self;
-}
+#include <stdio.h>
 
 Vec3 vec3_neg(Vec3 u) { return (Vec3){-u.x, -u.y, -u.z}; }
 Vec3 vec3vec3_add(Vec3 u, Vec3 v) { return (Vec3){u.x + v.x, u.y + v.y, u.z + v.z}; }
@@ -29,6 +9,8 @@ Vec3 vec3vec3_mul(Vec3 u, Vec3 v) { return (Vec3){u.x * v.x, u.y * v.y, u.z * v.
 Vec3 vec3float_add(Vec3 u, float v) { return (Vec3){u.x + v, u.y + v, u.z + v}; }
 Vec3 vec3float_sub(Vec3 u, float v) { return (Vec3){u.x - v, u.y - v, u.z - v}; }
 Vec3 vec3float_mul(Vec3 u, float v) { return (Vec3){u.x * v, u.y * v, u.z * v}; }
+Vec3 vec3float_div(Vec3 u, float v) { return vec3float_mul(u, 1.0f / v); }
+Vec3 vec3_lerp(Vec3 a, Vec3 b, float w) { return vec3vec3_add(vec3float_mul(a, 1.0f - w), vec3float_mul(b, w)); }
 
 float vec3_length2(Vec3 u) { return vec3_dot(u, u); }
 float vec3_length(Vec3 u) { return sqrtf(vec3_length2(u)); }
@@ -179,4 +161,85 @@ bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scatte
   default:
     return scatter_default(incident, hit_record, rng, scattered, color);
   }
+}
+
+void camera_init(Camera *camera, float aspect_ratio, int img_width, int samples_per_pixel, int max_depth) {
+  camera->aspect_ratio = aspect_ratio;
+  camera->img_width = img_width;
+  camera->img_height = (int)((float)img_width / aspect_ratio);
+  camera->samples_per_pixel = samples_per_pixel;
+  camera->max_depth = max_depth;
+  camera->position = (Vec3){0.0f, 0.0f, 0.0f};
+
+  float focal_length = 1.0f;
+  float viewport_height = 2.0f;
+  float viewport_width = viewport_height * (float)img_width / (float)camera->img_height;
+  Vec3 viewport_u = {viewport_width, 0.0f, 0.0f};   // scan from left to right
+  Vec3 viewport_v = {0.0f, -viewport_height, 0.0f}; // scan from top to bottom
+
+  camera->pixel_delta_u = vec3float_div(viewport_u, (float)img_width);
+  camera->pixel_delta_v = vec3float_div(viewport_v, (float)camera->img_height);
+
+  Vec3 camera_direction = {0.0f, 0.0f, focal_length};
+  Vec3 viewport_upper_left = vec3_add(camera->position, vec3_neg(camera_direction), vec3float_mul(viewport_u, -0.5f),
+                                      vec3float_mul(viewport_v, -0.5f));
+  camera->pixel00_loc = vec3_add(viewport_upper_left, vec3float_mul(camera->pixel_delta_u, 0.5f),
+                                 vec3float_mul(camera->pixel_delta_v, 0.5f));
+}
+
+Vec3 ray_color(const Ray *ray, const World *world, int depth, PCG32State *rng) {
+  if (depth <= 0)
+    return (Vec3){0.0f, 0.0f, 0.0f};
+
+  HitRecord hit_record;
+  if (hit_spheres(world, ray, 1e-3f, INFINITY, &hit_record)) {
+    Ray new_ray;
+    new_ray.origin = hit_record.p;
+    Vec3 color;
+
+    if (scatter(ray->direction, &hit_record, rng, &new_ray.direction, &color))
+      return vec3_mul(ray_color(&new_ray, world, depth - 1, rng), color); // spawn new ray
+    return color;
+  }
+
+  // scene background
+  Vec3 direction = vec3_unit(ray->direction);
+  float a = 0.5f * (direction.y + 1.0f); // [-1,1] -> [0,1]
+
+  Vec3 WHITE = {1.0f, 1.0f, 1.0f};
+  Vec3 BLUE = {0.5f, 0.7f, 1.0f};
+  return vec3_lerp(WHITE, BLUE, a);
+}
+
+void camera_render(Camera *camera, World *world, uint8_t *buffer) {
+  PCG32State rng;
+  pcg32_srandom_r(&rng, 10, 20);
+
+  for (int j = 0; j < camera->img_height; j++) {
+    fprintf(stderr, "\rScanlines remaining: %d", camera->img_height - j);
+
+    for (int i = 0; i < camera->img_width; i++) {
+      Vec3 pixel_pos = vec3_add(camera->pixel00_loc, vec3_mul(camera->pixel_delta_u, (float)i),
+                                vec3_mul(camera->pixel_delta_v, (float)j));
+      Vec3 pixel_color = {0.0f, 0.0f, 0.0f};
+
+      for (int sample = 0; sample < camera->samples_per_pixel; sample++) {
+        // square sampling
+        // another option: sinc sampling
+        // TODO: use 64-bit PRNG to generate 2 numbers at once
+        float px = pcg32_randomf_r(&rng) - 0.5f;
+        float py = pcg32_randomf_r(&rng) - 0.5f;
+        Vec3 ray_direction = vec3_add(pixel_pos, vec3_mul(camera->pixel_delta_u, px),
+                                      vec3_mul(camera->pixel_delta_v, py), vec3_neg(camera->position));
+        Ray ray = {camera->position, ray_direction};
+        pixel_color = vec3_add(pixel_color, ray_color(&ray, world, camera->max_depth, &rng));
+      }
+
+      pixel_color = vec3float_div(pixel_color, (float)camera->samples_per_pixel);
+      buffer[(j * camera->img_width + i) * 3] = (int)(256.0f * clamp(sqrtf(pixel_color.x), 0.0f, 0.999f));
+      buffer[(j * camera->img_width + i) * 3 + 1] = (int)(256.0f * clamp(sqrtf(pixel_color.y), 0.0f, 0.999f));
+      buffer[(j * camera->img_width + i) * 3 + 2] = (int)(256.0f * clamp(sqrtf(pixel_color.z), 0.0f, 0.999f));
+    }
+  }
+  fprintf(stderr, "\nDone\n");
 }
