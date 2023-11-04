@@ -23,12 +23,7 @@ Vec3 ray_color(const Ray *ray, const World *world, int depth, PCG32State *rng) {
     Vec3 color;
     new_ray.origin = hit_record.p;
 
-    if (hit_record.material_id >= world->n_materials) {
-      fprintf(stderr, "Index out of bounds");
-      return (Vec3){0.0f, 0.0f, 0.0f};
-    }
-    Material *material = world->materials + hit_record.material_id;
-    if (scatter(material, ray->direction, hit_record.normal, rng, &new_ray.direction, &color))
+    if (scatter(ray->direction, &hit_record, rng, &new_ray.direction, &color))
       return vec3_mul(ray_color(&new_ray, world, depth - 1, rng), color); // reflect 50% light
     else
       return color;
@@ -48,26 +43,32 @@ int main(int argc, char *argv[]) {
   int img_height = (int)((float)img_width / aspect_ratio);
 
   World world;
-  world.n_spheres = 2;
-  world.spheres = malloc(sizeof(Sphere) * world.n_spheres);
-  if (world.spheres == NULL) {
-    fprintf(stderr, "Failed to allocate memory.\n");
-    return 1;
-  }
-  world.spheres[0] = (Sphere){{0.0f, -100.5f, -1.0f}, 100.0f, 0};
-  world.spheres[1] = (Sphere){{0.0f, 0.0f, -1.0f}, 0.5f, 1};
-
-  world.n_materials = 2;
+  world.n_materials = 4;
   world.materials = malloc(sizeof(Material) * world.n_materials);
   if (world.materials == NULL) {
     fprintf(stderr, "Failed to allocate memory.\n");
     return 1;
   }
-  world.materials[0] = (Material){LAMBERTIAN, {0.2f, 0.2, 0.2f}};
-  world.materials[1] = (Material){NORMAL, {0.2f, 0.2, 0.2f}};
+  world.materials[0] = (Material){LAMBERTIAN, {0.8f, 0.8f, 0.0f}};
+  world.materials[1] = (Material){DIELECTRIC, {1.0f, 1.0f, 0.8f}, 0.0f, 1.5f};
+  world.materials[2] = (Material){METAL, {0.8f, 0.8f, 0.8f}, 0.3f};
+  world.materials[3] = (Material){METAL, {0.8f, 0.6f, 0.2f}, 1.0f};
+
+  world.n_spheres = 5;
+  world.spheres = malloc(sizeof(Sphere) * world.n_spheres);
+  if (world.spheres == NULL) {
+    fprintf(stderr, "Failed to allocate memory.\n");
+    return 1;
+  }
+  world.spheres[0] = (Sphere){{0.0f, -100.5f, -1.0f}, 100.0f, world.materials};
+  world.spheres[1] = (Sphere){{0.0f, 0.0f, -1.0f}, 0.5f, world.materials + 1};
+  world.spheres[2] =
+      (Sphere){{0.0f, 0.0f, -1.0f}, -0.4f, world.materials + 1}; // negative radius -> opposite surface normal
+  world.spheres[3] = (Sphere){{-1.0f, 0.0f, -1.0f}, 0.5f, world.materials + 2};
+  world.spheres[4] = (Sphere){{1.0f, 0.0f, -1.0f}, 0.5f, world.materials + 3};
 
   int samples_per_pixel = 100;
-  int max_depth = 10;
+  int max_depth = 5;
   float focal_length = 1.0f;
   float viewport_height = 2.0f;
   float viewport_width = viewport_height * (float)img_width / (float)img_height;
