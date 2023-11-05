@@ -38,4 +38,4 @@ jobs:
       - run: |
           curl https://github.com/nothings/stb/raw/master/stb_image.h -o include/external/stb_image.h
           cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast ${{ matrix.options }} /Femain.exe src/*.c
-          ./main
+          main.exe
