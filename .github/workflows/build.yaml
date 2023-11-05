@@ -35,4 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cl /Zc:preprocessor /std:c11 /O2 /fp:fast ${{ matrix.options }} /Femain.exe *.c && ./main
+      - run: |
+          mkdir include/external && curl https://raw.githubusercontent.com/nothings/stb/master/stb_image.h -o include/external/stb_image.h
+          cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast ${{ matrix.options }} /Femain.exe src/*.c
+          ./main.exe
