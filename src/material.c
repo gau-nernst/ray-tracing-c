@@ -19,7 +19,7 @@ void image_load(Image *image, char *filename) {
   image->buffer = stbi_load(filename, &image->width, &image->height, NULL, 3);
 }
 
-Vec3 image_texture_value(Image *image, float u, float v, Vec3 p) {
+Vec3 image_texture_value(Image *image, float u, float v) {
   // nearest neighbour sampling
   // flip v to image coordinates
   int i = (int)roundf(u * (float)(image->width - 1));
@@ -53,9 +53,7 @@ void perlin_init(Perlin *perlin, PCG32State *rng) {
 
 float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
 
-Vec3 perlin_texture_value(Perlin *perlin, float u, float v, Vec3 p) {
-  p = vec3_mul(p, perlin->scale);
-
+float perlin_noise(Perlin *perlin, Vec3 p) {
   int i = (int)floorf(p.x);
   int j = (int)floorf(p.y);
   int k = (int)floorf(p.z);
@@ -79,7 +77,26 @@ Vec3 perlin_texture_value(Perlin *perlin, float u, float v, Vec3 p) {
                  (dk * tt3 + (1 - dk) * (1.0f - tt3));
       }
 
-  value = (value + 1.0f) * 0.5f;
+  return value;
+}
+
+float perlin_turbulence(Perlin *perlin, Vec3 p) {
+  float value = 0.0f;
+  float weight = 1.0f;
+  for (int i = 0; i < perlin->depth; i++) {
+    value += weight * perlin_noise(perlin, p);
+    weight *= 0.5f;
+    p = vec3_mul(p, 2.0f);
+  }
+  return fabs(value);
+}
+
+Vec3 perlin_texture_value(Perlin *perlin, Vec3 p) {
+  p = vec3_mul(p, perlin->scale);
+  // float value = perlin_noise(perlin, p);
+  // value = (value + 1.0f) * 0.5f;
+  float value = perlin_turbulence(perlin, p);
+  value = (sinf(10.0f * value + p.z) + 1.0f) * 0.5f;
   return (Vec3){value, value, value};
 }
 
@@ -90,9 +107,9 @@ Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
   case CHECKER:
     return checker_texture_value(texture.checker, u, v, p);
   case IMAGE:
-    return image_texture_value(texture.image, u, v, p);
+    return image_texture_value(texture.image, u, v);
   case PERLIN:
-    return perlin_texture_value(texture.perlin, u, v, p);
+    return perlin_texture_value(texture.perlin, p);
   default:
     return (Vec3){0.0f, 0.0f, 0.0f};
   }

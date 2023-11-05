@@ -30,6 +30,7 @@ void image_load(Image *image, char *filename);
 
 typedef struct Perlin {
   float scale;
+  int depth;
   Vec3 grad_field[N_PERLIN];
   int perm_x[N_PERLIN];
   int perm_y[N_PERLIN];

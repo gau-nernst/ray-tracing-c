@@ -143,6 +143,7 @@ void scene_perlin(World *world, Camera *camera) {
   pcg32_seed(&rng, 19, 29);
   perlin_init(world->perlins, &rng);
   world->perlins[0].scale = 4.0f;
+  world->perlins[0].depth = 7;
   world->materials[0] = (Material){LAMBERTIAN, {PERLIN, .perlin = world->perlins}};
   world->spheres[0] = (Sphere){{0.0f, -1000.0f, 0.0f}, 1000.0f, world->materials};
   world->spheres[1] = (Sphere){{0.0f, 2.0f, 0.0f}, 2.0f, world->materials};
