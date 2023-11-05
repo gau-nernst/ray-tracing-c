@@ -24,6 +24,7 @@ jobs:
         options: ["", "ENABLE_OPENMP=1"]
     steps:
       - uses: actions/checkout@v3
+      - run: brew install libomp
       - run: make launch CC=$(brew --prefix llvm@15)/bin/clang ${{ matrix.options }}
 
   build-windows:
