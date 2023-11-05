@@ -6,19 +6,33 @@ on:
       - .gitignore
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  build-ubuntu:
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest]
+        options: ["", "ENABLE_OPENMP=1"]
     steps:
       - uses: actions/checkout@v3
-      - run: make launch
+      - run: make launch ${{ matrix.options }}
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        options: ["", "ENABLE_OPENMP=1"]
+    steps:
+      - uses: actions/checkout@v3
+      - run: make launch CC=$(brew --prefix llvm@15)/bin/clang LDFLAGS+=-L$(brew --prefix libomp)/lib ${{ matrix.options }}
 
   build-windows:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        options: ["", "/openmp"]
     steps:
       - uses: actions/checkout@v3
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cl /Zc:preprocessor /std:c11 /O2 /fp:fast /Femain.exe *.c && ./main
+      - run: cl /Zc:preprocessor /std:c11 /O2 /fp:fast ${{ matrix.options }} /Femain.exe *.c && ./main
