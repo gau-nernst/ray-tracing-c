@@ -12,9 +12,9 @@ void world_init(World *world) {
   try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
   try_malloc(world->materials, sizeof(Material) * world->n_materials);
   try_malloc(world->colors, sizeof(Vec3) * world->n_colors);
-  try_malloc(world->checkers, sizeof(TextureChecker) * world->n_checkers);
+  try_malloc(world->checkers, sizeof(Checker) * world->n_checkers);
   try_malloc(world->images, sizeof(Image) * world->n_images);
-  try_malloc(world->perlins, sizeof(PerlinNoise) * world->n_perlins);
+  try_malloc(world->perlins, sizeof(Perlin) * world->n_perlins);
 }
 
 void scene_book1(World *world, Camera *camera) {
@@ -99,7 +99,7 @@ void scene_checker(World *world, Camera *camera) {
 
   world->colors[1] = (Vec3){0.2f, 0.3f, 0.1f};
   world->colors[2] = (Vec3){0.9f, 0.9f, 0.9f};
-  world->checkers[0] = (TextureChecker){1e-2f, {SOLID, .color = world->colors}, {SOLID, .color = world->colors + 1}};
+  world->checkers[0] = (Checker){1e-2f, {SOLID, .color = world->colors}, {SOLID, .color = world->colors + 1}};
 
   world->materials[0] = (Material){LAMBERTIAN, {CHECKER, .checker = world->checkers}};
   world->spheres[0] = (Sphere){{0.0f, -10.0f, 0.0f}, 10.0f, world->materials};
@@ -141,7 +141,7 @@ void scene_perlin(World *world, Camera *camera) {
 
   PCG32State rng;
   pcg32_seed(&rng, 19, 29);
-  perlin_noise_init(world->perlins, &rng);
+  perlin_init(world->perlins, &rng);
   world->perlins[0].scale = 4.0f;
   world->materials[0] = (Material){LAMBERTIAN, {PERLIN, .perlin = world->perlins}};
   world->spheres[0] = (Sphere){{0.0f, -1000.0f, 0.0f}, 1000.0f, world->materials};

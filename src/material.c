@@ -5,7 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 
-Vec3 texture_value_checker(TextureChecker *checker, float u, float v, Vec3 p) {
+Vec3 checker_texture_value(Checker *checker, float u, float v, Vec3 p) {
   // int x = (int)floorf(p.x / texture->scale);
   // int y = (int)floorf(p.y / texture->scale);
   // int z = (int)floorf(p.z / texture->scale);
@@ -19,7 +19,7 @@ void image_load(Image *image, char *filename) {
   image->buffer = stbi_load(filename, &image->width, &image->height, NULL, 3);
 }
 
-Vec3 texture_value_image(Image *image, float u, float v, Vec3 p) {
+Vec3 image_texture_value(Image *image, float u, float v, Vec3 p) {
   // nearest neighbour sampling
   // flip v to image coordinates
   int i = (int)roundf(u * (float)(image->width - 1));
@@ -43,7 +43,7 @@ void perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
   }
 }
 
-void perlin_noise_init(PerlinNoise *perlin, PCG32State *rng) {
+void perlin_init(Perlin *perlin, PCG32State *rng) {
   for (int i = 0; i < N_PERLIN; i++)
     perlin->grad_field[i] = vec3_rand_unit_vector(rng);
   perlin_permute(perlin->perm_x, rng);
@@ -53,7 +53,7 @@ void perlin_noise_init(PerlinNoise *perlin, PCG32State *rng) {
 
 float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
 
-Vec3 texture_value_perlin(PerlinNoise *perlin, float u, float v, Vec3 p) {
+Vec3 perlin_texture_value(Perlin *perlin, float u, float v, Vec3 p) {
   p = vec3_mul(p, perlin->scale);
 
   int i = (int)floorf(p.x);
@@ -88,11 +88,11 @@ Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
   case SOLID:
     return *texture.color;
   case CHECKER:
-    return texture_value_checker(texture.checker, u, v, p);
+    return checker_texture_value(texture.checker, u, v, p);
   case IMAGE:
-    return texture_value_image(texture.image, u, v, p);
+    return image_texture_value(texture.image, u, v, p);
   case PERLIN:
-    return texture_value_perlin(texture.perlin, u, v, p);
+    return perlin_texture_value(texture.perlin, u, v, p);
   default:
     return (Vec3){0.0f, 0.0f, 0.0f};
   }

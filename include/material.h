@@ -4,7 +4,7 @@
 #include "vec3.h"
 
 typedef struct Material Material;
-typedef struct TextureChecker TextureChecker;
+typedef struct Checker Checker;
 typedef struct Texture Texture;
 typedef struct HitRecord HitRecord;
 
@@ -28,15 +28,15 @@ void image_load(Image *image, char *filename);
 
 #define N_PERLIN 256
 
-typedef struct PerlinNoise {
+typedef struct Perlin {
   float scale;
   Vec3 grad_field[N_PERLIN];
   int perm_x[N_PERLIN];
   int perm_y[N_PERLIN];
   int perm_z[N_PERLIN];
-} PerlinNoise;
+} Perlin;
 
-void perlin_noise_init(PerlinNoise *perlin, PCG32State *rng);
+void perlin_init(Perlin *perlin, PCG32State *rng);
 
 struct Texture {
   enum TextureType {
@@ -47,13 +47,13 @@ struct Texture {
   } type;
   union {
     Vec3 *color;
-    TextureChecker *checker;
+    Checker *checker;
     Image *image;
-    PerlinNoise *perlin;
+    Perlin *perlin;
   };
 };
 
-struct TextureChecker {
+struct Checker {
   float scale;
   Texture even;
   Texture odd;

@@ -41,9 +41,9 @@ struct World {
   Sphere *spheres;
   Material *materials;
   Vec3 *colors;
-  TextureChecker *checkers;
+  Checker *checkers;
   Image *images;
-  PerlinNoise *perlins;
+  Perlin *perlins;
 };
 
 bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
