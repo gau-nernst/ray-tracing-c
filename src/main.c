@@ -20,19 +20,19 @@ void scene1(World *world, Camera *camera) {
   world->n_textures = 4 + 22 * 22;
   world_init(world);
 
-  world->textures[0] = (Texture){SOLID_COLOR, {0.5f, 0.5f, 0.5f}};
+  world->textures[0] = (Texture){SOLID, .color = {0.5f, 0.5f, 0.5f}};
   world->materials[0] = (Material){LAMBERTIAN, world->textures};
   world->spheres[0] = (Sphere){{0.0f, -1000.0f, -1.0f}, 1000.0f, world->materials};
 
-  world->textures[1] = (Texture){SOLID_COLOR, {1.0f, 1.0f, 1.0f}};
+  world->textures[1] = (Texture){SOLID, .color = {1.0f, 1.0f, 1.0f}};
   world->materials[1] = (Material){DIELECTRIC, world->textures + 1, 0.0f, 1.5f};
   world->spheres[1] = (Sphere){{0.0f, 1.0f, 0.0f}, 1.0f, world->materials + 1};
 
-  world->textures[2] = (Texture){SOLID_COLOR, {0.4f, 0.2f, 0.1f}};
+  world->textures[2] = (Texture){SOLID, .color = {0.4f, 0.2f, 0.1f}};
   world->materials[2] = (Material){LAMBERTIAN, world->textures + 2};
   world->spheres[2] = (Sphere){{-4.0f, 1.0f, 0.0f}, 1.0f, world->materials + 2};
 
-  world->textures[3] = (Texture){SOLID_COLOR, {0.7f, 0.6f, 0.5f}};
+  world->textures[3] = (Texture){SOLID, .color = {0.7f, 0.6f, 0.5f}};
   world->materials[3] = (Material){METAL, world->textures + 3, 0.0f};
   world->spheres[3] = (Sphere){{4.0f, 1.0f, 0.0f}, 1.0f, world->materials + 3};
 
@@ -58,14 +58,14 @@ void scene1(World *world, Camera *camera) {
 
         if (choose_material < 0.8f) {
           material->type = LAMBERTIAN;
-          *texture = (Texture){SOLID_COLOR, vec3_mul(vec3_rand(&rng), vec3_rand(&rng))};
+          *texture = (Texture){SOLID, .color = vec3_mul(vec3_rand(&rng), vec3_rand(&rng))};
         } else if (choose_material < 0.95f) {
           material->type = METAL;
-          *texture = (Texture){SOLID_COLOR, vec3_rand_between(0.5f, 1.0f, &rng)};
-          material->metal_fuzz = pcg32_randomf_r(&rng) / 2.0f;
+          *texture = (Texture){SOLID, .color = vec3_rand_between(0.5f, 1.0f, &rng)};
+          material->fuzz = pcg32_randomf_r(&rng) / 2.0f;
         } else {
           material->type = DIELECTRIC;
-          *texture = (Texture){SOLID_COLOR, {1.0f, 1.0f, 1.0f}};
+          *texture = (Texture){SOLID, .color = {1.0f, 1.0f, 1.0f}};
           material->eta = 1.5f;
         }
 
@@ -90,9 +90,9 @@ void scene2(World *world, Camera *camera) {
   world->n_spheres = 2;
   world_init(world);
 
-  world->textures[0] = (Texture){SOLID_COLOR, {0.2f, 0.3f, 0.1f}};
-  world->textures[1] = (Texture){SOLID_COLOR, {0.9f, 0.9f, 0.9f}};
-  world->textures[2] = (Texture){CHECKER, {0.0f, 0.0f, 0.0f}, 1e-2f, world->textures, world->textures + 1};
+  world->textures[0] = (Texture){SOLID, .color = {0.2f, 0.3f, 0.1f}};
+  world->textures[1] = (Texture){SOLID, .color = {0.9f, 0.9f, 0.9f}};
+  world->textures[2] = (Texture){CHECKER, .scale = 1e-2f, .even = world->textures, .odd = world->textures + 1};
 
   world->materials[0] = (Material){LAMBERTIAN, world->textures + 2};
   world->spheres[0] = (Sphere){{0.0f, -10.0f, 0.0f}, 10.0f, world->materials};

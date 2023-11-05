@@ -17,32 +17,32 @@ struct HitRecord {
   bool front_face;
 };
 
-typedef enum TextureType {
-  SOLID_COLOR,
-  CHECKER,
-} TextureType;
-
 struct Texture {
-  TextureType type;
-  Vec3 color;
-  float scale;
-  Texture *even;
-  Texture *odd;
+  enum TextureType {
+    SOLID,
+    CHECKER,
+  } type;
+  union {
+    Vec3 color; // SOLID
+    struct {    // CHECKER
+      float scale;
+      Texture *even;
+      Texture *odd;
+    };
+  };
 };
 
 Vec3 texture_value(Texture *texture, float u, float v, Vec3 p);
 
-typedef enum MaterialType {
-  NORMAL,
-  LAMBERTIAN,
-  METAL,
-  DIELECTRIC,
-} MaterialType;
-
 struct Material {
-  MaterialType type;
+  enum MaterialType {
+    NORMAL,
+    LAMBERTIAN,
+    METAL,
+    DIELECTRIC,
+  } type;
   Texture *albedo;
-  float metal_fuzz;
+  float fuzz;
   float eta;
 };
 

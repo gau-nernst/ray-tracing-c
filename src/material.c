@@ -1,7 +1,6 @@
 #include "material.h"
 #include <math.h>
 
-Vec3 texture_value_solid_color(Texture *texture, float u, float v, Vec3 p) { return texture->color; }
 Vec3 texture_value_checker(Texture *texture, float u, float v, Vec3 p) {
   // int x = (int)floorf(p.x / texture->scale);
   // int y = (int)floorf(p.y / texture->scale);
@@ -14,8 +13,8 @@ Vec3 texture_value_checker(Texture *texture, float u, float v, Vec3 p) {
 
 Vec3 texture_value(Texture *texture, float u, float v, Vec3 p) {
   switch (texture->type) {
-  case SOLID_COLOR:
-    return texture_value_solid_color(texture, u, v, p);
+  case SOLID:
+    return texture->color;
   case CHECKER:
     return texture_value_checker(texture, u, v, p);
   default:
@@ -43,7 +42,7 @@ Vec3 reflect(Vec3 incident, Vec3 normal) {
 
 bool scatter_metal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   *scattered = vec3_add(reflect(incident, hit_record->normal),
-                        vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->metal_fuzz));
+                        vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->fuzz));
   *color = texture_value(hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return vec3_dot(*scattered, hit_record->normal) > 0; // check for degeneration
 }
