@@ -35,4 +35,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cl /Zc:preprocessor /std:c11 /O2 /fp:fast ${{ matrix.options }} /Femain.exe *.c && ./main
+      - run: cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast ${{ matrix.options }} /Femain.exe src/*.c && ./main
