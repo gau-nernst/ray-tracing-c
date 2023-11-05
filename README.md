@@ -24,7 +24,7 @@ make launch CC=$(brew --prefix llvm)/bin/clang ENABLE_OPENMP=1
 On Windows
 
 ```bash
-cl /Zc:preprocessor /std:c11 /O2 /fp:fast /Femain.exe *.c
-cl /Zc:preprocessor /std:c11 /O2 /fp:fast /openmp /Femain.exe *.c  # for OpenMP support
+cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast /Femain.exe src/*.c
+cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast /openmp /Femain.exe src/*.c  # for OpenMP support
 ./main
 ```
