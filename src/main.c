@@ -37,7 +37,7 @@ void scene_book1(World *world, Camera *camera) {
   world->spheres[3] = (Sphere){{4.0f, 1.0f, 0.0f}, 1.0f, world->materials + 3};
 
   PCG32State rng;
-  pcg32_srandom_r(&rng, 19, 29);
+  pcg32_seed(&rng, 19, 29);
 
   Vec3 ref_point = {4.0f, 0.2f, 0.0f};
   size_t index = 4;
@@ -45,8 +45,8 @@ void scene_book1(World *world, Camera *camera) {
 
   for (int a = -11; a < 11; a++)
     for (int b = -11; b < 11; b++) {
-      float choose_material = pcg32_randomf_r(&rng);
-      Vec3 center = {(float)a + 0.9f * pcg32_randomf_r(&rng), radius, (float)b + 0.9f * pcg32_randomf_r(&rng)};
+      float choose_material = pcg32_f32(&rng);
+      Vec3 center = {(float)a + 0.9f * pcg32_f32(&rng), radius, (float)b + 0.9f * pcg32_f32(&rng)};
 
       if (vec3_length(vec3_sub(center, ref_point)) > 0.9f) {
         Sphere *sphere = world->spheres + index;
@@ -61,8 +61,8 @@ void scene_book1(World *world, Camera *camera) {
           *texture = (Texture){SOLID, .color = vec3_mul(vec3_rand(&rng), vec3_rand(&rng))};
         } else if (choose_material < 0.95f) {
           material->type = METAL;
-          *texture = (Texture){SOLID, .color = vec3_rand_between(0.5f, 1.0f, &rng)};
-          material->fuzz = pcg32_randomf_r(&rng) / 2.0f;
+          *texture = (Texture){SOLID, .color = vec3_rand_between(&rng, 0.5f, 1.0f)};
+          material->fuzz = pcg32_f32(&rng) * 0.5f;
         } else {
           material->type = DIELECTRIC;
           *texture = (Texture){SOLID, .color = {1.0f, 1.0f, 1.0f}};
@@ -91,7 +91,7 @@ void scene2(World *world, Camera *camera) {
 
   world->textures[0] = (Texture){SOLID, .color = {0.2f, 0.3f, 0.1f}};
   world->textures[1] = (Texture){SOLID, .color = {0.9f, 0.9f, 0.9f}};
-  world->textures[2] = (Texture){CHECKER, .scale = 1e-2f, .even = world->textures, .odd = world->textures + 1};
+  world->textures[2] = (Texture){CHECKER, .checker_scale = 1e-2f, .even = world->textures, .odd = world->textures + 1};
 
   world->materials[0] = (Material){LAMBERTIAN, world->textures + 2};
   world->spheres[0] = (Sphere){{0.0f, -10.0f, 0.0f}, 10.0f, world->materials};
@@ -121,6 +121,27 @@ void scene_earth(World *world, Camera *camera) {
   camera->focal_length = 10.0f;
 }
 
+void scene_perlin(World *world, Camera *camera) {
+  world->n_textures = 1;
+  world->n_materials = 1;
+  world->n_spheres = 2;
+  world_init(world);
+
+  PCG32State rng;
+  pcg32_seed(&rng, 19, 29);
+  texture_perlin_init(world->textures, &rng);
+  world->textures[0].perlin_scale = 4.0f;
+  world->materials[0] = (Material){LAMBERTIAN, world->textures};
+  world->spheres[0] = (Sphere){{0.0f, -1000.0f, 0.0f}, 1000.0f, world->materials};
+  world->spheres[1] = (Sphere){{0.0f, 2.0f, 0.0f}, 2.0f, world->materials};
+
+  camera->vfov = 20.0f;
+  camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
+  camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
+  camera->dof_angle = 0.0f;
+  camera->focal_length = 10.0f;
+}
+
 int main(int argc, char *argv[]) {
   World world;
   Camera camera;
@@ -130,7 +151,7 @@ int main(int argc, char *argv[]) {
   camera.max_depth = 10;
   camera.vup = (Vec3){0.0f, 1.0f, 0.0f};
 
-  scene2(&world, &camera);
+  scene_perlin(&world, &camera);
   camera_init(&camera);
 
   uint8_t *image;

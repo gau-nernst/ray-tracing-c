@@ -22,11 +22,12 @@ struct Texture {
     SOLID,
     CHECKER,
     IMAGE,
+    PERLIN,
   } type;
   union {
     Vec3 color; // SOLID
     struct {    // CHECKER
-      float scale;
+      float checker_scale;
       Texture *even;
       Texture *odd;
     };
@@ -35,10 +36,18 @@ struct Texture {
       int height;
       uint8_t *image;
     };
+    struct { // PERLIN
+      float perlin_scale;
+      float *values;
+      int *perm_x;
+      int *perm_y;
+      int *perm_z;
+    };
   };
 };
 
 void texture_image_load(Texture *texture, char *filename);
+void texture_perlin_init(Texture *texture, PCG32State *rng);
 Vec3 texture_value(Texture *texture, float u, float v, Vec3 p);
 
 struct Material {
