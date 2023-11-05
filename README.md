@@ -23,6 +23,8 @@ make launch CC=$(brew --prefix llvm)/bin/clang ENABLE_OPENMP=1
 
 On Windows
 
+Download [`stb_image.h`](https://github.com/nothings/stb/blob/master/stb_image.h) and place it under `include/external`.
+
 ```bash
 cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast /Femain.exe src/*.c
 cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast /openmp /Femain.exe src/*.c  # for OpenMP support
