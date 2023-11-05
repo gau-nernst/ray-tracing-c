@@ -1,6 +1,14 @@
 #include "material.h"
 #include <math.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "external/stb_image.h"
+
+void texture_image_load(Texture *texture, char *filename) {
+  texture->type = IMAGE;
+  texture->image = stbi_load(filename, &texture->width, &texture->height, NULL, 3);
+}
+
 Vec3 texture_value_checker(Texture *texture, float u, float v, Vec3 p) {
   // int x = (int)floorf(p.x / texture->scale);
   // int y = (int)floorf(p.y / texture->scale);
@@ -11,12 +19,26 @@ Vec3 texture_value_checker(Texture *texture, float u, float v, Vec3 p) {
   return texture_value((int_u + int_v) % 2 ? texture->odd : texture->even, u, v, p);
 }
 
+Vec3 texture_value_image(Texture *texture, float u, float v, Vec3 p) {
+  // nearest neighbour sampling
+  // flip v to image coordinates
+  int i = (int)roundf(u * (float)(texture->width - 1));
+  int j = (int)roundf((1.0f - v) * (float)(texture->height - 1));
+  return (Vec3){
+      (float)texture->image[((j * texture->width) + i) * 3] / 255.0f,
+      (float)texture->image[((j * texture->width) + i) * 3 + 1] / 255.0f,
+      (float)texture->image[((j * texture->width) + i) * 3 + 2] / 255.0f,
+  };
+}
+
 Vec3 texture_value(Texture *texture, float u, float v, Vec3 p) {
   switch (texture->type) {
   case SOLID:
     return texture->color;
   case CHECKER:
     return texture_value_checker(texture, u, v, p);
+  case IMAGE:
+    return texture_value_image(texture, u, v, p);
   default:
     return (Vec3){0.0f, 0.0f, 0.0f};
   }

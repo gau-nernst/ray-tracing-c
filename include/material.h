@@ -30,10 +30,15 @@ struct Texture {
       Texture *even;
       Texture *odd;
     };
-    uint8_t *image;
+    struct { // IMAGE
+      int width;
+      int height;
+      uint8_t *image;
+    };
   };
 };
 
+void texture_image_load(Texture *texture, char *filename);
 Vec3 texture_value(Texture *texture, float u, float v, Vec3 p);
 
 struct Material {

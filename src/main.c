@@ -14,7 +14,7 @@ void world_init(World *world) {
   try_malloc(world->textures, sizeof(Texture) * world->n_textures);
 }
 
-void scene1(World *world, Camera *camera) {
+void scene_book1(World *world, Camera *camera) {
   world->n_spheres = 4 + 22 * 22;
   world->n_materials = 4 + 22 * 22;
   world->n_textures = 4 + 22 * 22;
@@ -79,7 +79,6 @@ void scene1(World *world, Camera *camera) {
   camera->vfov = 20.0f;
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
-  camera->vup = (Vec3){0.0f, 1.0f, 0.0f};
   camera->dof_angle = 0.6f;
   camera->focal_length = 10.0f;
 }
@@ -101,7 +100,6 @@ void scene2(World *world, Camera *camera) {
   camera->vfov = 20.0f;
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
-  camera->vup = (Vec3){0.0f, 1.0f, 0.0f};
   camera->dof_angle = 0.0f;
   camera->focal_length = 10.0f;
 }
@@ -111,6 +109,16 @@ void scene_earth(World *world, Camera *camera) {
   world->n_materials = 1;
   world->n_spheres = 1;
   world_init(world);
+
+  texture_image_load(world->textures, "earthmap.jpg");
+  world->materials[0] = (Material){LAMBERTIAN, world->textures};
+  world->spheres[0] = (Sphere){{0.0f, 0.0f, 0.0f}, 2.0f, world->materials};
+
+  camera->vfov = 20.0f;
+  camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
+  camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
+  camera->dof_angle = 0.0f;
+  camera->focal_length = 10.0f;
 }
 
 int main(int argc, char *argv[]) {
@@ -120,6 +128,7 @@ int main(int argc, char *argv[]) {
   camera.img_width = 400;
   camera.samples_per_pixel = 10;
   camera.max_depth = 10;
+  camera.vup = (Vec3){0.0f, 1.0f, 0.0f};
 
   scene2(&world, &camera);
   camera_init(&camera);
