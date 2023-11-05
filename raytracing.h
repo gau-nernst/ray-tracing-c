@@ -19,6 +19,8 @@ typedef enum MaterialType MaterialType;
 typedef struct Material Material;
 typedef struct World World;
 typedef struct Camera Camera;
+typedef enum TextureType TextureType;
+typedef struct Texture Texture;
 
 // https://stackoverflow.com/a/11763277
 #define _GET_MACRO(_1, _2, _3, _4, FUNC, ...) FUNC
@@ -67,6 +69,21 @@ struct Ray {
 
 Vec3 ray_at(Ray ray, float t);
 
+enum TextureType {
+  SOLID_COLOR,
+  CHECKER,
+};
+
+struct Texture {
+  TextureType type;
+  Vec3 color;
+  float scale;
+  Texture *even;
+  Texture *odd;
+};
+
+Vec3 texture_value(Texture *texture, float u, float v, Vec3 p);
+
 enum MaterialType {
   NORMAL,
   LAMBERTIAN,
@@ -76,7 +93,7 @@ enum MaterialType {
 
 struct Material {
   MaterialType type;
-  Vec3 albedo;
+  Texture albedo;
   float metal_fuzz;
   float eta;
 };
@@ -86,6 +103,8 @@ struct HitRecord {
   Vec3 normal;
   Material *material;
   float t;
+  float u;
+  float v;
   bool front_face;
 };
 
@@ -130,7 +149,9 @@ struct Camera {
   Vec3 pixel00_loc;
   Vec3 pixel_delta_u;
   Vec3 pixel_delta_v;
-  Vec3 u, v, w; // camera basis vectors
+  Vec3 u; // camera basis vectors
+  Vec3 v;
+  Vec3 w;
   Vec3 dof_disc_u;
   Vec3 dof_disc_v;
 };

@@ -15,10 +15,10 @@ int scene1(World *world, Camera *camera) {
     return 1;
   }
 
-  world->materials[0] = (Material){LAMBERTIAN, {0.5f, 0.5f, 0.5f}};
-  world->materials[1] = (Material){DIELECTRIC, {1.0f, 1.0f, 1.0f}, 0.0f, 1.5f};
-  world->materials[2] = (Material){LAMBERTIAN, {0.4f, 0.2f, 0.1f}};
-  world->materials[3] = (Material){METAL, {0.7f, 0.6f, 0.5f}, 0.0f};
+  world->materials[0] = (Material){LAMBERTIAN, {SOLID_COLOR, {0.5f, 0.5f, 0.5f}}};
+  world->materials[1] = (Material){DIELECTRIC, {SOLID_COLOR, {1.0f, 1.0f, 1.0f}}, 0.0f, 1.5f};
+  world->materials[2] = (Material){LAMBERTIAN, {SOLID_COLOR, {0.4f, 0.2f, 0.1f}}};
+  world->materials[3] = (Material){METAL, {SOLID_COLOR, {0.7f, 0.6f, 0.5f}}, 0.0f};
 
   world->spheres[0] = (Sphere){{0.0f, -1000.0f, -1.0f}, 1000.0f, world->materials};
   world->spheres[1] = (Sphere){{0.0f, 1.0f, 0.0f}, 1.0f, world->materials + 1};
@@ -41,14 +41,14 @@ int scene1(World *world, Camera *camera) {
         Material *material = world->materials + index;
         if (choose_material < 0.8f) {
           material->type = LAMBERTIAN;
-          material->albedo = vec3_mul(vec3_rand(&rng), vec3_rand(&rng));
+          material->albedo = (Texture){SOLID_COLOR, vec3_mul(vec3_rand(&rng), vec3_rand(&rng))};
         } else if (choose_material < 0.95f) {
           material->type = METAL;
-          material->albedo = vec3_rand_between(0.5f, 1.0f, &rng);
+          material->albedo = (Texture){SOLID_COLOR, vec3_rand_between(0.5f, 1.0f, &rng)};
           material->metal_fuzz = pcg32_randomf_r(&rng) / 2.0f;
         } else {
           material->type = DIELECTRIC;
-          material->albedo = (Vec3){1.0f, 1.0f, 1.0f};
+          material->albedo = (Texture){SOLID_COLOR, {1.0f, 1.0f, 1.0f}};
           material->eta = 1.5f;
         }
 
@@ -71,6 +71,35 @@ int scene1(World *world, Camera *camera) {
   return 0;
 }
 
+int scene2(World *world, Camera *camera) {
+  Texture *textures = malloc(sizeof(Texture) * 2);
+  world->materials = malloc(sizeof(Material) * world->n_materials);
+  world->spheres = malloc(sizeof(Sphere) * world->n_spheres);
+  if (textures == NULL || world->spheres == NULL || world->materials == NULL) {
+    fprintf(stderr, "Failed to allocate memory.\n");
+    return 1;
+  }
+
+  textures[0] = (Texture){SOLID_COLOR, {0.2f, 0.3f, 0.1f}};
+  textures[1] = (Texture){SOLID_COLOR, {0.9f, 0.9f, 0.9f}};
+
+  world->n_materials = 1;
+  world->materials[0] = (Material){LAMBERTIAN, {CHECKER, {0.0f, 0.0f, 0.0f}, 1e-2f, textures, textures + 1}};
+
+  world->n_spheres = 2;
+  world->spheres[0] = (Sphere){{0.0f, -10.0f, 0.0f}, 10.0f, world->materials};
+  world->spheres[1] = (Sphere){{0.0f, 10.0f, 0.0f}, 10.0f, world->materials};
+
+  camera->vfov = 20.0f;
+  camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
+  camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
+  camera->vup = (Vec3){0.0f, 1.0f, 0.0f};
+  camera->dof_angle = 0.0f;
+  camera->focal_length = 10.0f;
+
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
   World world;
   Camera camera;
@@ -79,7 +108,7 @@ int main(int argc, char *argv[]) {
   camera.samples_per_pixel = 10;
   camera.max_depth = 10;
 
-  if (scene1(&world, &camera))
+  if (scene2(&world, &camera))
     return 1;
   camera_init(&camera);
 

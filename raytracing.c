@@ -47,6 +47,8 @@ bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, 
   Vec3 outward_normal = vec3_div(vec3_sub(hit_record->p, sphere->center), sphere->radius);
   hit_record->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
   hit_record->normal = hit_record->front_face ? outward_normal : vec3_neg(outward_normal);
+  hit_record->u = (atan2f(-outward_normal.z, outward_normal.x) + M_PI) * M_1_PI * 0.5;
+  hit_record->v = acosf(-outward_normal.y) * M_1_PI;
   hit_record->material = sphere->material;
 
   return true;
@@ -110,7 +112,7 @@ bool scatter_lambertian(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
   if (vec3_near_zero(new_direction))
     new_direction = hit_record->normal;
   *scattered = new_direction;
-  *color = hit_record->material->albedo;
+  *color = texture_value(&hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return true;
 }
 
@@ -121,7 +123,7 @@ Vec3 reflect(Vec3 incident, Vec3 normal) {
 bool scatter_metal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   *scattered = vec3_add(reflect(incident, hit_record->normal),
                         vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->metal_fuzz));
-  *color = hit_record->material->albedo;
+  *color = texture_value(&hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return vec3_dot(*scattered, hit_record->normal) > 0; // check for degeneration
 }
 
@@ -144,7 +146,7 @@ bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
     Vec3 r_para = vec3_mul(hit_record->normal, -sqrtf(fabsf(1.0f - vec3_length2(r_perp))));
     *scattered = vec3_add(r_perp, r_para);
   }
-  *color = hit_record->material->albedo;
+  *color = texture_value(&hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return true;
 }
 
@@ -266,4 +268,26 @@ void camera_render(Camera *camera, World *world, uint8_t *buffer) {
     }
   }
   fprintf(stderr, "\nDone\n");
+}
+
+Vec3 texture_value_solid_color(Texture *texture, float u, float v, Vec3 p) { return texture->color; }
+Vec3 texture_value_checker(Texture *texture, float u, float v, Vec3 p) {
+  // int x = (int)floorf(p.x / texture->scale);
+  // int y = (int)floorf(p.y / texture->scale);
+  // int z = (int)floorf(p.z / texture->scale);
+  // return texture_value((x + y + z) % 2 ? texture->odd : texture->even, u, v, p);
+  int int_u = (int)floorf(u / texture->scale);
+  int int_v = (int)floorf(v / texture->scale);
+  return texture_value((int_u + int_v) % 2 ? texture->odd : texture->even, u, v, p);
+}
+
+Vec3 texture_value(Texture *texture, float u, float v, Vec3 p) {
+  switch (texture->type) {
+  case SOLID_COLOR:
+    return texture_value_solid_color(texture, u, v, p);
+  case CHECKER:
+    return texture_value_checker(texture, u, v, p);
+  default:
+    return (Vec3){0.0f, 0.0f, 0.0f};
+  }
 }
