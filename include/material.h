@@ -4,6 +4,7 @@
 #include "vec3.h"
 
 typedef struct Material Material;
+typedef struct Checker Checker;
 typedef struct Texture Texture;
 typedef struct HitRecord HitRecord;
 
@@ -17,29 +18,49 @@ struct HitRecord {
   bool front_face;
 };
 
+typedef struct Image {
+  int width;
+  int height;
+  uint8_t *buffer;
+} Image;
+
+void image_load(Image *image, char *filename);
+
+#define N_PERLIN 256
+
+typedef struct Perlin {
+  float scale;
+  int depth;
+  Vec3 grad_field[N_PERLIN];
+  int perm_x[N_PERLIN];
+  int perm_y[N_PERLIN];
+  int perm_z[N_PERLIN];
+} Perlin;
+
+void perlin_init(Perlin *perlin, PCG32State *rng);
+
 struct Texture {
   enum TextureType {
     SOLID,
     CHECKER,
     IMAGE,
+    PERLIN,
   } type;
   union {
-    Vec3 color; // SOLID
-    struct {    // CHECKER
-      float scale;
-      Texture *even;
-      Texture *odd;
-    };
-    struct { // IMAGE
-      int width;
-      int height;
-      uint8_t *image;
-    };
+    Vec3 *color;
+    Checker *checker;
+    Image *image;
+    Perlin *perlin;
   };
 };
 
-void texture_image_load(Texture *texture, char *filename);
-Vec3 texture_value(Texture *texture, float u, float v, Vec3 p);
+struct Checker {
+  float scale;
+  Texture even;
+  Texture odd;
+};
+
+Vec3 texture_value(Texture texture, float u, float v, Vec3 p);
 
 struct Material {
   enum MaterialType {
@@ -48,7 +69,7 @@ struct Material {
     METAL,
     DIELECTRIC,
   } type;
-  Texture *albedo;
+  Texture albedo;
   float fuzz;
   float eta;
 };

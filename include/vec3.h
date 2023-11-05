@@ -40,7 +40,7 @@ Vec3 vec3_unit(Vec3 u);
 bool vec3_near_zero(Vec3 u);
 
 Vec3 vec3_rand(PCG32State *rng);
-Vec3 vec3_rand_between(float low, float high, PCG32State *rng);
+Vec3 vec3_rand_between(PCG32State *rng, float lo, float hi);
 Vec3 vec3_rand_unit_vector(PCG32State *rng);
 Vec3 vec3_rand_hemisphere(Vec3 normal, PCG32State *rng);
 

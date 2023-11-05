@@ -1,55 +1,121 @@
 #include "material.h"
 #include <math.h>
+#include <stdlib.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 
-void texture_image_load(Texture *texture, char *filename) {
-  texture->type = IMAGE;
-  texture->image = stbi_load(filename, &texture->width, &texture->height, NULL, 3);
-}
-
-Vec3 texture_value_checker(Texture *texture, float u, float v, Vec3 p) {
+Vec3 checker_texture_value(Checker *checker, float u, float v, Vec3 p) {
   // int x = (int)floorf(p.x / texture->scale);
   // int y = (int)floorf(p.y / texture->scale);
   // int z = (int)floorf(p.z / texture->scale);
   // return texture_value((x + y + z) % 2 ? texture->odd : texture->even, u, v, p);
-  int int_u = (int)floorf(u / texture->scale);
-  int int_v = (int)floorf(v / texture->scale);
-  return texture_value((int_u + int_v) % 2 ? texture->odd : texture->even, u, v, p);
+  int int_u = (int)floorf(u / checker->scale);
+  int int_v = (int)floorf(v / checker->scale);
+  return texture_value((int_u + int_v) % 2 ? checker->odd : checker->even, u, v, p);
 }
 
-Vec3 texture_value_image(Texture *texture, float u, float v, Vec3 p) {
+void image_load(Image *image, char *filename) {
+  image->buffer = stbi_load(filename, &image->width, &image->height, NULL, 3);
+}
+
+Vec3 image_texture_value(Image *image, float u, float v) {
   // nearest neighbour sampling
   // flip v to image coordinates
-  int i = (int)roundf(u * (float)(texture->width - 1));
-  int j = (int)roundf((1.0f - v) * (float)(texture->height - 1));
+  int i = (int)roundf(u * (float)(image->width - 1));
+  int j = (int)roundf((1.0f - v) * (float)(image->height - 1));
+  int offset = ((j * image->width) + i) * 3;
   return (Vec3){
-      (float)texture->image[((j * texture->width) + i) * 3] / 255.0f,
-      (float)texture->image[((j * texture->width) + i) * 3 + 1] / 255.0f,
-      (float)texture->image[((j * texture->width) + i) * 3 + 2] / 255.0f,
+      (float)image->buffer[offset] / 255.0f,
+      (float)image->buffer[offset + 1] / 255.0f,
+      (float)image->buffer[offset + 2] / 255.0f,
   };
 }
 
-Vec3 texture_value(Texture *texture, float u, float v, Vec3 p) {
-  switch (texture->type) {
+void perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
+  for (int i = 0; i < N_PERLIN; i++)
+    perm[i] = i;
+  for (int i = N_PERLIN - 1; i > 0; i--) {
+    uint32_t target = pcg32_u32_between(rng, 0, i + 1);
+    int tmp = perm[i];
+    perm[i] = perm[target];
+    perm[target] = tmp;
+  }
+}
+
+void perlin_init(Perlin *perlin, PCG32State *rng) {
+  for (int i = 0; i < N_PERLIN; i++)
+    perlin->grad_field[i] = vec3_rand_unit_vector(rng);
+  perlin_permute(perlin->perm_x, rng);
+  perlin_permute(perlin->perm_y, rng);
+  perlin_permute(perlin->perm_z, rng);
+}
+
+float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
+
+float perlin_noise(Perlin *perlin, Vec3 p) {
+  int i = (int)floorf(p.x);
+  int j = (int)floorf(p.y);
+  int k = (int)floorf(p.z);
+
+  float t1 = p.x - (float)i;
+  float t2 = p.y - (float)j;
+  float t3 = p.z - (float)k;
+
+  float tt1 = hermitian_smoothing(t1);
+  float tt2 = hermitian_smoothing(t2);
+  float tt3 = hermitian_smoothing(t3);
+
+  float value = 0;
+  for (int di = 0; di < 2; di++)
+    for (int dj = 0; dj < 2; dj++)
+      for (int dk = 0; dk < 2; dk++) {
+        Vec3 grad = perlin->grad_field[perlin->perm_x[(i + di) & 255] ^ perlin->perm_y[(j + dj) & 255] ^
+                                       perlin->perm_z[(k + dk) & 255]];
+        Vec3 weight = {t1 - di, t2 - dj, t3 - dk};
+        value += vec3_dot(grad, weight) * (di * tt1 + (1 - di) * (1.0f - tt1)) * (dj * tt2 + (1 - dj) * (1.0f - tt2)) *
+                 (dk * tt3 + (1 - dk) * (1.0f - tt3));
+      }
+
+  return value;
+}
+
+float perlin_turbulence(Perlin *perlin, Vec3 p) {
+  float value = 0.0f;
+  float weight = 1.0f;
+  for (int i = 0; i < perlin->depth; i++) {
+    value += weight * perlin_noise(perlin, p);
+    weight *= 0.5f;
+    p = vec3_mul(p, 2.0f);
+  }
+  return fabs(value);
+}
+
+Vec3 perlin_texture_value(Perlin *perlin, Vec3 p) {
+  p = vec3_mul(p, perlin->scale);
+  // float value = perlin_noise(perlin, p);
+  // value = (value + 1.0f) * 0.5f;
+  float value = perlin_turbulence(perlin, p);
+  value = (sinf(10.0f * value + p.z) + 1.0f) * 0.5f;
+  return (Vec3){value, value, value};
+}
+
+Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
+  switch (texture.type) {
   case SOLID:
-    return texture->color;
+    return *texture.color;
   case CHECKER:
-    return texture_value_checker(texture, u, v, p);
+    return checker_texture_value(texture.checker, u, v, p);
   case IMAGE:
-    return texture_value_image(texture, u, v, p);
+    return image_texture_value(texture.image, u, v);
+  case PERLIN:
+    return perlin_texture_value(texture.perlin, p);
   default:
     return (Vec3){0.0f, 0.0f, 0.0f};
   }
 }
 
-bool scatter_normal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  *color = vec3float_mul(vec3_add(hit_record->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
-  return false;
-}
-
-bool scatter_lambertian(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+bool scatter_lambertian(HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   Vec3 new_direction = vec3_add(hit_record->normal, vec3_rand_unit_vector(rng));
   if (vec3_near_zero(new_direction))
     new_direction = hit_record->normal;
@@ -81,7 +147,7 @@ bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
   schlick_r += (1 - schlick_r) * powf(1.0f - cos_theta, 5.0f);
 
   // total internal reflection or partial reflections (Fresnel)
-  if (eta * sin_theta > 1.0f || schlick_r > pcg32_randomf_r(rng)) {
+  if (eta * sin_theta > 1.0f || schlick_r > pcg32_f32(rng)) {
     *scattered = reflect(incident, hit_record->normal);
   } else {
     Vec3 r_perp = vec3_mul(vec3_add(incident, vec3_mul(hit_record->normal, cos_theta)), eta);
@@ -92,22 +158,19 @@ bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
   return true;
 }
 
-bool scatter_default(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  *color = (Vec3){0.0f, 0.0f, 0.0f};
-  return false;
-}
-
 bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   switch (hit_record->material->type) {
   case NORMAL:
-    return scatter_normal(incident, hit_record, rng, scattered, color);
+    *color = vec3float_mul(vec3_add(hit_record->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+    return false;
   case LAMBERTIAN:
-    return scatter_lambertian(incident, hit_record, rng, scattered, color);
+    return scatter_lambertian(hit_record, rng, scattered, color);
   case METAL:
     return scatter_metal(incident, hit_record, rng, scattered, color);
   case DIELECTRIC:
     return scatter_dielectric(incident, hit_record, rng, scattered, color);
   default:
-    return scatter_default(incident, hit_record, rng, scattered, color);
+    *color = (Vec3){0.0f, 0.0f, 0.0f};
+    return false;
   }
 }

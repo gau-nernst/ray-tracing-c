@@ -31,12 +31,19 @@ struct Sphere {
 };
 
 struct World {
-  Sphere *spheres;
   size_t n_spheres;
-  Material *materials;
   size_t n_materials;
-  Texture *textures;
-  size_t n_textures;
+  size_t n_colors;
+  size_t n_checkers;
+  size_t n_images;
+  size_t n_perlins;
+
+  Sphere *spheres;
+  Material *materials;
+  Vec3 *colors;
+  Checker *checkers;
+  Image *images;
+  Perlin *perlins;
 };
 
 bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);

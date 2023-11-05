@@ -106,7 +106,7 @@ void camera_render(Camera *camera, World *world, uint8_t *buffer) {
 #pragma omp parallel for private(i) schedule(static, 1)
     for (i = 0; i < camera->img_width; i++) {
       PCG32State rng;
-      pcg32_srandom_r(&rng, 17 + j, 23 + i);
+      pcg32_seed(&rng, 17 + j, 23 + i);
 
       Vec3 pixel_pos = vec3_add(camera->pixel00_loc, vec3_mul(camera->pixel_delta_u, (float)i),
                                 vec3_mul(camera->pixel_delta_v, (float)j));
@@ -116,16 +116,16 @@ void camera_render(Camera *camera, World *world, uint8_t *buffer) {
         // square sampling
         // another option: sinc sampling
         // TODO: use 64-bit PRNG to generate 2 numbers at once
-        float px = pcg32_randomf_r(&rng) - 0.5f;
-        float py = pcg32_randomf_r(&rng) - 0.5f;
+        float px = pcg32_f32_between(&rng, -0.5f, 0.5f);
+        float py = pcg32_f32_between(&rng, -0.5f, 0.5f);
 
         Ray ray;
         if (camera->dof_angle > 0.0f) {
           // sample points around camera.look_from like a (thin) lens/aperture
           float a, b;
           for (;;) {
-            a = pcg32_randomf_r(&rng) * 2.0f - 1.0f;
-            b = pcg32_randomf_r(&rng) * 2.0f - 1.0f;
+            a = pcg32_f32_between(&rng, -1.0f, 1.0f);
+            b = pcg32_f32_between(&rng, -1.0f, 1.0f);
             if (a * a + b * b < 1.0f)
               break;
           }
