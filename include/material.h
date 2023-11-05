@@ -21,6 +21,7 @@ struct Texture {
   enum TextureType {
     SOLID,
     CHECKER,
+    IMAGE,
   } type;
   union {
     Vec3 color; // SOLID
@@ -29,6 +30,7 @@ struct Texture {
       Texture *even;
       Texture *odd;
     };
+    uint8_t *image;
   };
 };
 

@@ -41,8 +41,8 @@ Vec3 reflect(Vec3 incident, Vec3 normal) {
 }
 
 bool scatter_metal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  *scattered = vec3_add(reflect(incident, hit_record->normal),
-                        vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->fuzz));
+  *scattered =
+      vec3_add(reflect(incident, hit_record->normal), vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->fuzz));
   *color = texture_value(hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return vec3_dot(*scattered, hit_record->normal) > 0; // check for degeneration
 }

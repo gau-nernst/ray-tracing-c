@@ -106,6 +106,13 @@ void scene2(World *world, Camera *camera) {
   camera->focal_length = 10.0f;
 }
 
+void scene_earth(World *world, Camera *camera) {
+  world->n_textures = 1;
+  world->n_materials = 1;
+  world->n_spheres = 1;
+  world_init(world);
+}
+
 int main(int argc, char *argv[]) {
   World world;
   Camera camera;
@@ -117,18 +124,18 @@ int main(int argc, char *argv[]) {
   scene2(&world, &camera);
   camera_init(&camera);
 
-  Image8 image = {camera.img_width, camera.img_height, 3};
-  try_malloc(image.data, camera.img_width * camera.img_height * 3);
+  uint8_t *image;
+  try_malloc(image, camera.img_width * camera.img_height * 3);
 
   time_t start, stop;
   time(&start);
-  camera_render(&camera, &world, image.data);
+  camera_render(&camera, &world, image);
   time(&stop);
   fprintf(stderr, "Took %ld seconds\n", stop - start);
 
   FILE *f = fopen("output.tiff", "wb");
   assert((f != NULL) && "Failed to open file");
-  write_tiff(f, image);
+  write_tiff(f, camera.img_width, camera.img_height, 3, image);
 
   return 0;
 }
