@@ -1,11 +1,12 @@
-CFLAGS += -Wall -Ofast -MMD -MP
+CFLAGS += -Wall -Ofast -MMD -MP -I./include
 LDLIBS += -lm
 
 ifdef ENABLE_OPENMP
 CFLAGS += -fopenmp
 endif
 
-OBJECTS = tiff.o pcg32.o vec3.o material.o raytracing.o main.o
+SOURCES = $(wildcard src/*.c)
+OBJECTS = $(patsubst %.c,%.o,$(SOURCES))
 DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 
 -include $(DEPENDS)  # re-compile when headers change
@@ -17,7 +18,7 @@ launch: main
 	./main
 
 format:
-	clang-format -i *.c *.h
+	clang-format -i src/*.c include/*.h
 
 clean:
-	rm *.o *.d
+	rm $(OBJECTS) $(DEPENDS)
