@@ -11,6 +11,8 @@ DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 
 -include $(DEPENDS)  # re-compile when headers change
 
+$(shell mkdir -p obj)
+
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
