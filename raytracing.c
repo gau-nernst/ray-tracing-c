@@ -219,13 +219,14 @@ Vec3 ray_color(const Ray *ray, const World *world, int depth, PCG32State *rng) {
 }
 
 void camera_render(Camera *camera, World *world, uint8_t *buffer) {
-  PCG32State rng;
-  pcg32_srandom_r(&rng, 10, 20);
-
   for (int j = 0; j < camera->img_height; j++) {
     fprintf(stderr, "\rScanlines remaining: %d", camera->img_height - j);
 
+#pragma omp parallel for schedule(static, 1)
     for (int i = 0; i < camera->img_width; i++) {
+      PCG32State rng;
+      pcg32_srandom_r(&rng, 17 + j, 23 + i);
+
       Vec3 pixel_pos = vec3_add(camera->pixel00_loc, vec3_mul(camera->pixel_delta_u, (float)i),
                                 vec3_mul(camera->pixel_delta_v, (float)j));
       Vec3 pixel_color = {0.0f, 0.0f, 0.0f};
