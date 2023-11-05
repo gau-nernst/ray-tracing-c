@@ -1,28 +1,39 @@
 #include "raytracing.h"
 #include "tiff.h"
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
+#define try_malloc(ptr, sz) assert(((ptr = malloc(sz)) != NULL) && "Failed to allocate memory")
+
+void world_init(World *world) {
+  try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
+  try_malloc(world->materials, sizeof(Material) * world->n_materials);
+  try_malloc(world->textures, sizeof(Texture) * world->n_textures);
+}
+
 int scene1(World *world, Camera *camera) {
   world->n_spheres = 4 + 22 * 22;
   world->n_materials = 4 + 22 * 22;
-  world->spheres = malloc(sizeof(Sphere) * world->n_spheres);
-  world->materials = malloc(sizeof(Material) * world->n_materials);
-  if (world->spheres == NULL || world->materials == NULL) {
-    fprintf(stderr, "Failed to allocate memory.\n");
-    return 1;
-  }
+  world->n_textures = 4 + 22 * 22;
+  world_init(world);
 
-  world->materials[0] = (Material){LAMBERTIAN, {SOLID_COLOR, {0.5f, 0.5f, 0.5f}}};
-  world->materials[1] = (Material){DIELECTRIC, {SOLID_COLOR, {1.0f, 1.0f, 1.0f}}, 0.0f, 1.5f};
-  world->materials[2] = (Material){LAMBERTIAN, {SOLID_COLOR, {0.4f, 0.2f, 0.1f}}};
-  world->materials[3] = (Material){METAL, {SOLID_COLOR, {0.7f, 0.6f, 0.5f}}, 0.0f};
-
+  world->textures[0] = (Texture){SOLID_COLOR, {0.5f, 0.5f, 0.5f}};
+  world->materials[0] = (Material){LAMBERTIAN, world->textures};
   world->spheres[0] = (Sphere){{0.0f, -1000.0f, -1.0f}, 1000.0f, world->materials};
+
+  world->textures[1] = (Texture){SOLID_COLOR, {1.0f, 1.0f, 1.0f}};
+  world->materials[1] = (Material){DIELECTRIC, world->textures + 1, 0.0f, 1.5f};
   world->spheres[1] = (Sphere){{0.0f, 1.0f, 0.0f}, 1.0f, world->materials + 1};
+
+  world->textures[2] = (Texture){SOLID_COLOR, {0.4f, 0.2f, 0.1f}};
+  world->materials[2] = (Material){LAMBERTIAN, world->textures + 2};
   world->spheres[2] = (Sphere){{-4.0f, 1.0f, 0.0f}, 1.0f, world->materials + 2};
+
+  world->textures[3] = (Texture){SOLID_COLOR, {0.7f, 0.6f, 0.5f}};
+  world->materials[3] = (Material){METAL, world->textures + 3, 0.0f};
   world->spheres[3] = (Sphere){{4.0f, 1.0f, 0.0f}, 1.0f, world->materials + 3};
 
   PCG32State rng;
@@ -38,28 +49,32 @@ int scene1(World *world, Camera *camera) {
       Vec3 center = {(float)a + 0.9f * pcg32_randomf_r(&rng), radius, (float)b + 0.9f * pcg32_randomf_r(&rng)};
 
       if (vec3_length(vec3_sub(center, ref_point)) > 0.9f) {
+        Sphere *sphere = world->spheres + index;
         Material *material = world->materials + index;
+        Texture *texture = world->textures + index;
+
+        *sphere = (Sphere){center, radius, material};
+        material->albedo = texture;
+
         if (choose_material < 0.8f) {
           material->type = LAMBERTIAN;
-          material->albedo = (Texture){SOLID_COLOR, vec3_mul(vec3_rand(&rng), vec3_rand(&rng))};
+          *texture = (Texture){SOLID_COLOR, vec3_mul(vec3_rand(&rng), vec3_rand(&rng))};
         } else if (choose_material < 0.95f) {
           material->type = METAL;
-          material->albedo = (Texture){SOLID_COLOR, vec3_rand_between(0.5f, 1.0f, &rng)};
+          *texture = (Texture){SOLID_COLOR, vec3_rand_between(0.5f, 1.0f, &rng)};
           material->metal_fuzz = pcg32_randomf_r(&rng) / 2.0f;
         } else {
           material->type = DIELECTRIC;
-          material->albedo = (Texture){SOLID_COLOR, {1.0f, 1.0f, 1.0f}};
+          *texture = (Texture){SOLID_COLOR, {1.0f, 1.0f, 1.0f}};
           material->eta = 1.5f;
         }
 
-        world->spheres[index].center = center;
-        world->spheres[index].radius = radius;
-        world->spheres[index].material = material;
         index++;
       }
     }
   world->n_spheres = index;
   world->n_materials = index;
+  world->n_textures = index;
 
   camera->vfov = 20.0f;
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
@@ -72,21 +87,16 @@ int scene1(World *world, Camera *camera) {
 }
 
 int scene2(World *world, Camera *camera) {
-  Texture *textures = malloc(sizeof(Texture) * 2);
-  world->materials = malloc(sizeof(Material) * world->n_materials);
-  world->spheres = malloc(sizeof(Sphere) * world->n_spheres);
-  if (textures == NULL || world->spheres == NULL || world->materials == NULL) {
-    fprintf(stderr, "Failed to allocate memory.\n");
-    return 1;
-  }
-
-  textures[0] = (Texture){SOLID_COLOR, {0.2f, 0.3f, 0.1f}};
-  textures[1] = (Texture){SOLID_COLOR, {0.9f, 0.9f, 0.9f}};
-
+  world->n_textures = 3;
   world->n_materials = 1;
-  world->materials[0] = (Material){LAMBERTIAN, {CHECKER, {0.0f, 0.0f, 0.0f}, 1e-2f, textures, textures + 1}};
-
   world->n_spheres = 2;
+  world_init(world);
+
+  world->textures[0] = (Texture){SOLID_COLOR, {0.2f, 0.3f, 0.1f}};
+  world->textures[1] = (Texture){SOLID_COLOR, {0.9f, 0.9f, 0.9f}};
+  world->textures[2] = (Texture){CHECKER, {0.0f, 0.0f, 0.0f}, 1e-2f, world->textures, world->textures + 1};
+
+  world->materials[0] = (Material){LAMBERTIAN, world->textures + 2};
   world->spheres[0] = (Sphere){{0.0f, -10.0f, 0.0f}, 10.0f, world->materials};
   world->spheres[1] = (Sphere){{0.0f, 10.0f, 0.0f}, 10.0f, world->materials};
 
@@ -112,11 +122,8 @@ int main(int argc, char *argv[]) {
     return 1;
   camera_init(&camera);
 
-  Image8 image = {camera.img_width, camera.img_height, 3, malloc(camera.img_width * camera.img_height * 3)};
-  if (image.data == NULL) {
-    fprintf(stderr, "Failed to allocate memory\n");
-    return 1;
-  }
+  Image8 image = {camera.img_width, camera.img_height, 3};
+  try_malloc(image.data, camera.img_width * camera.img_height * 3);
 
   time_t start, stop;
   time(&start);
@@ -125,10 +132,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "Took %ld seconds\n", stop - start);
 
   FILE *f = fopen("output.tiff", "wb");
-  if (f == NULL) {
-    fprintf(stderr, "Failed to open file\n");
-    return 1;
-  }
+  assert((f != NULL) && "Failed to open file");
   write_tiff(f, image);
 
   return 0;

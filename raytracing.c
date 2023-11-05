@@ -58,7 +58,7 @@ bool scatter_lambertian(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
   if (vec3_near_zero(new_direction))
     new_direction = hit_record->normal;
   *scattered = new_direction;
-  *color = texture_value(&hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
+  *color = texture_value(hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return true;
 }
 
@@ -69,7 +69,7 @@ Vec3 reflect(Vec3 incident, Vec3 normal) {
 bool scatter_metal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   *scattered = vec3_add(reflect(incident, hit_record->normal),
                         vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->metal_fuzz));
-  *color = texture_value(&hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
+  *color = texture_value(hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return vec3_dot(*scattered, hit_record->normal) > 0; // check for degeneration
 }
 
@@ -92,7 +92,7 @@ bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
     Vec3 r_para = vec3_mul(hit_record->normal, -sqrtf(fabsf(1.0f - vec3_length2(r_perp))));
     *scattered = vec3_add(r_perp, r_para);
   }
-  *color = texture_value(&hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
+  *color = texture_value(hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return true;
 }
 

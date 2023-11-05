@@ -52,7 +52,7 @@ enum MaterialType {
 
 struct Material {
   MaterialType type;
-  Texture albedo;
+  Texture *albedo;
   float metal_fuzz;
   float eta;
 };
@@ -78,6 +78,8 @@ struct World {
   size_t n_spheres;
   Material *materials;
   size_t n_materials;
+  Texture *textures;
+  size_t n_textures;
 };
 
 bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
