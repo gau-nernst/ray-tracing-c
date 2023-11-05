@@ -38,7 +38,7 @@ struct Texture {
     };
     struct { // PERLIN
       float perlin_scale;
-      float *values;
+      Vec3 *grad_field;
       int *perm_x;
       int *perm_y;
       int *perm_z;
