@@ -5,14 +5,34 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 
-#define N_PERLIN 256
-
-void texture_image_load(Texture *texture, char *filename) {
-  texture->type = IMAGE;
-  texture->image = stbi_load(filename, &texture->width, &texture->height, NULL, 3);
+Vec3 texture_value_checker(TextureChecker *checker, float u, float v, Vec3 p) {
+  // int x = (int)floorf(p.x / texture->scale);
+  // int y = (int)floorf(p.y / texture->scale);
+  // int z = (int)floorf(p.z / texture->scale);
+  // return texture_value((x + y + z) % 2 ? texture->odd : texture->even, u, v, p);
+  int int_u = (int)floorf(u / checker->scale);
+  int int_v = (int)floorf(v / checker->scale);
+  return texture_value((int_u + int_v) % 2 ? checker->odd : checker->even, u, v, p);
 }
 
-void texture_perlin_permute(int *perm, PCG32State *rng) {
+void image_load(Image *image, char *filename) {
+  image->buffer = stbi_load(filename, &image->width, &image->height, NULL, 3);
+}
+
+Vec3 texture_value_image(Image *image, float u, float v, Vec3 p) {
+  // nearest neighbour sampling
+  // flip v to image coordinates
+  int i = (int)roundf(u * (float)(image->width - 1));
+  int j = (int)roundf((1.0f - v) * (float)(image->height - 1));
+  int offset = ((j * image->width) + i) * 3;
+  return (Vec3){
+      (float)image->buffer[offset] / 255.0f,
+      (float)image->buffer[offset + 1] / 255.0f,
+      (float)image->buffer[offset + 2] / 255.0f,
+  };
+}
+
+void perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
   for (int i = 0; i < N_PERLIN; i++)
     perm[i] = i;
   for (int i = N_PERLIN - 1; i > 0; i--) {
@@ -23,47 +43,18 @@ void texture_perlin_permute(int *perm, PCG32State *rng) {
   }
 }
 
-void texture_perlin_init(Texture *texture, PCG32State *rng) {
-  texture->type = PERLIN;
-  texture->perlin_scale = 1.0f;
-  texture->grad_field = malloc(sizeof(texture->grad_field[0]) * N_PERLIN);
-  texture->perm_x = malloc(sizeof(texture->perm_x[0]) * N_PERLIN);
-  texture->perm_y = malloc(sizeof(texture->perm_y[0]) * N_PERLIN);
-  texture->perm_z = malloc(sizeof(texture->perm_z[0]) * N_PERLIN);
-
+void perlin_noise_init(PerlinNoise *perlin, PCG32State *rng) {
   for (int i = 0; i < N_PERLIN; i++)
-    texture->grad_field[i] = vec3_rand_unit_vector(rng);
-  texture_perlin_permute(texture->perm_x, rng);
-  texture_perlin_permute(texture->perm_y, rng);
-  texture_perlin_permute(texture->perm_z, rng);
-}
-
-Vec3 texture_value_checker(Texture *texture, float u, float v, Vec3 p) {
-  // int x = (int)floorf(p.x / texture->scale);
-  // int y = (int)floorf(p.y / texture->scale);
-  // int z = (int)floorf(p.z / texture->scale);
-  // return texture_value((x + y + z) % 2 ? texture->odd : texture->even, u, v, p);
-  int int_u = (int)floorf(u / texture->checker_scale);
-  int int_v = (int)floorf(v / texture->checker_scale);
-  return texture_value((int_u + int_v) % 2 ? texture->odd : texture->even, u, v, p);
-}
-
-Vec3 texture_value_image(Texture *texture, float u, float v, Vec3 p) {
-  // nearest neighbour sampling
-  // flip v to image coordinates
-  int i = (int)roundf(u * (float)(texture->width - 1));
-  int j = (int)roundf((1.0f - v) * (float)(texture->height - 1));
-  return (Vec3){
-      (float)texture->image[((j * texture->width) + i) * 3] / 255.0f,
-      (float)texture->image[((j * texture->width) + i) * 3 + 1] / 255.0f,
-      (float)texture->image[((j * texture->width) + i) * 3 + 2] / 255.0f,
-  };
+    perlin->grad_field[i] = vec3_rand_unit_vector(rng);
+  perlin_permute(perlin->perm_x, rng);
+  perlin_permute(perlin->perm_y, rng);
+  perlin_permute(perlin->perm_z, rng);
 }
 
 float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
 
-Vec3 texture_value_perlin(Texture *texture, float u, float v, Vec3 p) {
-  p = vec3_mul(p, texture->perlin_scale);
+Vec3 texture_value_perlin(PerlinNoise *perlin, float u, float v, Vec3 p) {
+  p = vec3_mul(p, perlin->scale);
 
   int i = (int)floorf(p.x);
   int j = (int)floorf(p.y);
@@ -81,8 +72,8 @@ Vec3 texture_value_perlin(Texture *texture, float u, float v, Vec3 p) {
   for (int di = 0; di < 2; di++)
     for (int dj = 0; dj < 2; dj++)
       for (int dk = 0; dk < 2; dk++) {
-        Vec3 grad = texture->grad_field[texture->perm_x[(i + di) & 255] ^ texture->perm_y[(j + dj) & 255] ^
-                                        texture->perm_z[(k + dk) & 255]];
+        Vec3 grad = perlin->grad_field[perlin->perm_x[(i + di) & 255] ^ perlin->perm_y[(j + dj) & 255] ^
+                                       perlin->perm_z[(k + dk) & 255]];
         Vec3 weight = {t1 - di, t2 - dj, t3 - dk};
         value += vec3_dot(grad, weight) * (di * tt1 + (1 - di) * (1.0f - tt1)) * (dj * tt2 + (1 - dj) * (1.0f - tt2)) *
                  (dk * tt3 + (1 - dk) * (1.0f - tt3));
@@ -92,16 +83,16 @@ Vec3 texture_value_perlin(Texture *texture, float u, float v, Vec3 p) {
   return (Vec3){value, value, value};
 }
 
-Vec3 texture_value(Texture *texture, float u, float v, Vec3 p) {
-  switch (texture->type) {
+Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
+  switch (texture.type) {
   case SOLID:
-    return texture->color;
+    return *texture.color;
   case CHECKER:
-    return texture_value_checker(texture, u, v, p);
+    return texture_value_checker(texture.checker, u, v, p);
   case IMAGE:
-    return texture_value_image(texture, u, v, p);
+    return texture_value_image(texture.image, u, v, p);
   case PERLIN:
-    return texture_value_perlin(texture, u, v, p);
+    return texture_value_perlin(texture.perlin, u, v, p);
   default:
     return (Vec3){0.0f, 0.0f, 0.0f};
   }
