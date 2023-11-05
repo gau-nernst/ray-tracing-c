@@ -1,3 +1,4 @@
+#include "material.h"
 #include "vec3.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -12,14 +13,9 @@
 #define clamp(x, lo, hi) min(max(x, lo), hi)
 
 typedef struct Ray Ray;
-typedef struct HitRecord HitRecord;
 typedef struct Sphere Sphere;
-typedef enum MaterialType MaterialType;
-typedef struct Material Material;
 typedef struct World World;
 typedef struct Camera Camera;
-typedef enum TextureType TextureType;
-typedef struct Texture Texture;
 
 struct Ray {
   Vec3 origin;
@@ -27,45 +23,6 @@ struct Ray {
 };
 
 Vec3 ray_at(Ray ray, float t);
-
-enum TextureType {
-  SOLID_COLOR,
-  CHECKER,
-};
-
-struct Texture {
-  TextureType type;
-  Vec3 color;
-  float scale;
-  Texture *even;
-  Texture *odd;
-};
-
-Vec3 texture_value(Texture *texture, float u, float v, Vec3 p);
-
-enum MaterialType {
-  NORMAL,
-  LAMBERTIAN,
-  METAL,
-  DIELECTRIC,
-};
-
-struct Material {
-  MaterialType type;
-  Texture *albedo;
-  float metal_fuzz;
-  float eta;
-};
-
-struct HitRecord {
-  Vec3 p;
-  Vec3 normal;
-  Material *material;
-  float t;
-  float u;
-  float v;
-  bool front_face;
-};
 
 struct Sphere {
   Vec3 center;
@@ -84,7 +41,6 @@ struct World {
 
 bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 bool hit_spheres(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
-bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color);
 
 struct Camera {
   float aspect_ratio;

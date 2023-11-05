@@ -14,7 +14,7 @@ void world_init(World *world) {
   try_malloc(world->textures, sizeof(Texture) * world->n_textures);
 }
 
-int scene1(World *world, Camera *camera) {
+void scene1(World *world, Camera *camera) {
   world->n_spheres = 4 + 22 * 22;
   world->n_materials = 4 + 22 * 22;
   world->n_textures = 4 + 22 * 22;
@@ -82,11 +82,9 @@ int scene1(World *world, Camera *camera) {
   camera->vup = (Vec3){0.0f, 1.0f, 0.0f};
   camera->dof_angle = 0.6f;
   camera->focal_length = 10.0f;
-
-  return 0;
 }
 
-int scene2(World *world, Camera *camera) {
+void scene2(World *world, Camera *camera) {
   world->n_textures = 3;
   world->n_materials = 1;
   world->n_spheres = 2;
@@ -106,8 +104,6 @@ int scene2(World *world, Camera *camera) {
   camera->vup = (Vec3){0.0f, 1.0f, 0.0f};
   camera->dof_angle = 0.0f;
   camera->focal_length = 10.0f;
-
-  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -118,8 +114,7 @@ int main(int argc, char *argv[]) {
   camera.samples_per_pixel = 10;
   camera.max_depth = 10;
 
-  if (scene2(&world, &camera))
-    return 1;
+  scene2(&world, &camera);
   camera_init(&camera);
 
   Image8 image = {camera.img_width, camera.img_height, 3};

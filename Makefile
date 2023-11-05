@@ -5,7 +5,7 @@ ifdef ENABLE_OPENMP
 CFLAGS += -fopenmp
 endif
 
-OBJECTS = tiff.o pcg32.o vec3.o raytracing.o main.o
+OBJECTS = tiff.o pcg32.o vec3.o material.o raytracing.o main.o
 DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 
 -include $(DEPENDS)  # re-compile when headers change
