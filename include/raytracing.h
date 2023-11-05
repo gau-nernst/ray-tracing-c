@@ -55,6 +55,7 @@ struct Camera {
   int img_height;
   int samples_per_pixel;
   int max_depth;
+  Vec3 background;
   float vfov;
   Vec3 look_from;
   Vec3 look_to;
@@ -72,4 +73,4 @@ struct Camera {
 };
 
 void camera_init(Camera *camera);
-void camera_render(Camera *camera, World *world, uint8_t *buffer);
+void camera_render(const Camera *camera, const World *world, uint8_t *buffer);

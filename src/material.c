@@ -174,3 +174,12 @@ bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scatte
     return false;
   }
 }
+
+Vec3 emit(HitRecord *hit_record) {
+  switch (hit_record->material->type) {
+  case DIFFUSE_LIGHT:
+    return *hit_record->material->albedo.color;
+  default:
+    return (Vec3){0.0f, 0.0f, 0.0f};
+  }
+}

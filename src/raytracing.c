@@ -74,7 +74,7 @@ void camera_init(Camera *camera) {
   camera->dof_disc_v = vec3_mul(camera->v, dof_radius);
 }
 
-Vec3 ray_color(const Ray *ray, const World *world, int depth, PCG32State *rng) {
+Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (depth <= 0)
     return (Vec3){0.0f, 0.0f, 0.0f};
 
@@ -82,23 +82,28 @@ Vec3 ray_color(const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (hit_spheres(world, ray, 1e-3f, INFINITY, &hit_record)) {
     Ray new_ray;
     new_ray.origin = hit_record.p;
-    Vec3 color;
+    Vec3 scatter_color;
 
-    if (scatter(ray->direction, &hit_record, rng, &new_ray.direction, &color))
-      return vec3_mul(ray_color(&new_ray, world, depth - 1, rng), color); // spawn new ray
-    return color;
+    if (scatter(ray->direction, &hit_record, rng, &new_ray.direction, &scatter_color))
+      scatter_color =
+          vec3_mul(camera_ray_color(camera, &new_ray, world, depth - 1, rng), scatter_color); // spawn new ray
+
+    return vec3_add(scatter_color, emit(&hit_record));
   }
 
   // scene background
-  Vec3 direction = vec3_unit(ray->direction);
-  float a = 0.5f * (direction.y + 1.0f); // [-1,1] -> [0,1]
+  return camera->background;
 
-  Vec3 WHITE = {1.0f, 1.0f, 1.0f};
-  Vec3 BLUE = {0.5f, 0.7f, 1.0f};
-  return vec3_lerp(WHITE, BLUE, a);
+  // old background
+  // Vec3 direction = vec3_unit(ray->direction);
+  // float a = 0.5f * (direction.y + 1.0f); // [-1,1] -> [0,1]
+
+  // Vec3 WHITE = {1.0f, 1.0f, 1.0f};
+  // Vec3 BLUE = {0.5f, 0.7f, 1.0f};
+  // return vec3_lerp(WHITE, BLUE, a);
 }
 
-void camera_render(Camera *camera, World *world, uint8_t *buffer) {
+void camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
   for (int j = 0; j < camera->img_height; j++) {
     fprintf(stderr, "\rScanlines remaining: %d", camera->img_height - j);
 
@@ -136,7 +141,7 @@ void camera_render(Camera *camera, World *world, uint8_t *buffer) {
         ray.direction = vec3_add(pixel_pos, vec3_mul(camera->pixel_delta_u, px), vec3_mul(camera->pixel_delta_v, py),
                                  vec3_neg(ray.origin));
 
-        pixel_color = vec3_add(pixel_color, ray_color(&ray, world, camera->max_depth, &rng));
+        pixel_color = vec3_add(pixel_color, camera_ray_color(camera, &ray, world, camera->max_depth, &rng));
       }
 
       pixel_color = vec3_div(pixel_color, (float)camera->samples_per_pixel);

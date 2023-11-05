@@ -82,6 +82,7 @@ void scene_book1(World *world, Camera *camera) {
   world->n_colors = index;
 
   camera->vfov = 20.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
   camera->dof_angle = 0.6f;
@@ -106,6 +107,7 @@ void scene_checker(World *world, Camera *camera) {
   world->spheres[1] = (Sphere){{0.0f, 10.0f, 0.0f}, 10.0f, world->materials};
 
   camera->vfov = 20.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
   camera->dof_angle = 0.0f;
@@ -125,6 +127,7 @@ void scene_earth(World *world, Camera *camera) {
   world->spheres[0] = (Sphere){{0.0f, 0.0f, 0.0f}, 2.0f, world->materials};
 
   camera->vfov = 20.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
   camera->dof_angle = 0.0f;
@@ -149,6 +152,7 @@ void scene_perlin(World *world, Camera *camera) {
   world->spheres[1] = (Sphere){{0.0f, 2.0f, 0.0f}, 2.0f, world->materials};
 
   camera->vfov = 20.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
   camera->dof_angle = 0.0f;
