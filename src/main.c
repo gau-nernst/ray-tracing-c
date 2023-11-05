@@ -156,6 +156,8 @@ void scene_perlin(World *world, Camera *camera) {
 }
 
 int main(int argc, char *argv[]) {
+  assert(argc > 1);
+
   World world;
   Camera camera;
   camera.aspect_ratio = 16.0f / 9.0f;
@@ -164,7 +166,21 @@ int main(int argc, char *argv[]) {
   camera.max_depth = 10;
   camera.vup = (Vec3){0.0f, 1.0f, 0.0f};
 
-  scene_perlin(&world, &camera);
+  switch (strtol(argv[1], NULL, 10)) {
+  default:
+  case 0:
+    scene_book1(&world, &camera);
+    break;
+  case 1:
+    scene_checker(&world, &camera);
+    break;
+  case 2:
+    scene_earth(&world, &camera);
+    break;
+  case 3:
+    scene_perlin(&world, &camera);
+    break;
+  }
   camera_init(&camera);
 
   uint8_t *image;

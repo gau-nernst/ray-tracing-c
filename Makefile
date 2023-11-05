@@ -24,8 +24,8 @@ obj/%.o: src/%.c
 main: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@ $(LDLIBS) $(LDFLAGS)
 
-launch: main
-	./main
+launch%: main
+	./main $(patsubst launch%,%,$@)
 
 format:
 	clang-format -i src/*.c include/*.h

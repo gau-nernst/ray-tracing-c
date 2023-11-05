@@ -10,15 +10,16 @@ Other Ray Tracing in One Weekend repos:
 On Linux and macOS
 
 ```bash
-make launch
-make launch ENABLE_OPENMP=1  # for OpenMP support
+make main
+make main ENABLE_OPENMP=1  # for OpenMP support
+./main 0
 ```
 
 On MacOS, Apple Clang does not support OpenMP. Install LLVM from Homebrew to build with OpenMP.
 
 ```bash
 brew install llvm
-make launch CC=$(brew --prefix llvm)/bin/clang ENABLE_OPENMP=1
+make main CC=$(brew --prefix llvm)/bin/clang ENABLE_OPENMP=1
 ```
 
 On Windows
@@ -28,5 +29,5 @@ Download [`stb_image.h`](https://github.com/nothings/stb/blob/master/stb_image.h
 ```bash
 cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast /Femain.exe src/*.c
 cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast /openmp /Femain.exe src/*.c  # for OpenMP support
-./main
+./main.exe 0
 ```
