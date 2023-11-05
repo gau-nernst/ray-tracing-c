@@ -1,4 +1,4 @@
-CFLAGS += -Wall -Ofast
+CFLAGS += -Wall -Ofast -MMD -MP
 LDLIBS += -lm
 
 ifdef ENABLE_OPENMP
@@ -6,6 +6,9 @@ CFLAGS += -fopenmp
 endif
 
 OBJECTS = tiff.o raytracing.o main.o
+DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
+
+-include $(DEPENDS)  # re-compile when headers change
 
 main: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@ $(LDLIBS) $(LDFLAGS)
@@ -17,4 +20,4 @@ format:
 	clang-format -i *.c *.h
 
 clean:
-	rm *.o
+	rm *.o *.d
