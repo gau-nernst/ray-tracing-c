@@ -6,10 +6,13 @@ CFLAGS += -fopenmp
 endif
 
 SOURCES = $(wildcard src/*.c)
-OBJECTS = $(patsubst %.c,%.o,$(SOURCES))
+OBJECTS = $(patsubst src/%.c,obj/%.o,$(SOURCES))
 DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 
 -include $(DEPENDS)  # re-compile when headers change
+
+obj/%.o: src/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 main: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@ $(LDLIBS) $(LDFLAGS)
