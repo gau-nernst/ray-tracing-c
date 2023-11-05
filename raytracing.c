@@ -222,8 +222,9 @@ void camera_render(Camera *camera, World *world, uint8_t *buffer) {
   for (int j = 0; j < camera->img_height; j++) {
     fprintf(stderr, "\rScanlines remaining: %d", camera->img_height - j);
 
-#pragma omp parallel for schedule(static, 1)
-    for (int i = 0; i < camera->img_width; i++) {
+    int i; // C89 for loop for MSVC OpenMP
+#pragma omp parallel for private(i) schedule(static, 1)
+    for (i = 0; i < camera->img_width; i++) {
       PCG32State rng;
       pcg32_srandom_r(&rng, 17 + j, 23 + i);
 
