@@ -24,7 +24,6 @@ jobs:
         options: ["", "ENABLE_OPENMP=1"]
     steps:
       - uses: actions/checkout@v3
-      - run: brew install llvm
       - run: make launch CC=$(brew --prefix llvm)/bin/clang ${{ matrix.options }}
 
   build-windows:
