@@ -115,12 +115,7 @@ Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
   }
 }
 
-bool scatter_normal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  *color = vec3float_mul(vec3_add(hit_record->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
-  return false;
-}
-
-bool scatter_lambertian(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+bool scatter_lambertian(HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   Vec3 new_direction = vec3_add(hit_record->normal, vec3_rand_unit_vector(rng));
   if (vec3_near_zero(new_direction))
     new_direction = hit_record->normal;
@@ -163,22 +158,19 @@ bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, V
   return true;
 }
 
-bool scatter_default(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  *color = (Vec3){0.0f, 0.0f, 0.0f};
-  return false;
-}
-
 bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   switch (hit_record->material->type) {
   case NORMAL:
-    return scatter_normal(incident, hit_record, rng, scattered, color);
+    *color = vec3float_mul(vec3_add(hit_record->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+    return false;
   case LAMBERTIAN:
-    return scatter_lambertian(incident, hit_record, rng, scattered, color);
+    return scatter_lambertian(hit_record, rng, scattered, color);
   case METAL:
     return scatter_metal(incident, hit_record, rng, scattered, color);
   case DIELECTRIC:
     return scatter_dielectric(incident, hit_record, rng, scattered, color);
   default:
-    return scatter_default(incident, hit_record, rng, scattered, color);
+    *color = (Vec3){0.0f, 0.0f, 0.0f};
+    return false;
   }
 }
