@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 
-Vec3 ray_at(Ray ray, float t) { return vec3vec3_add(ray.origin, vec3float_mul(ray.direction, t)); }
+Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
 bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
@@ -24,7 +24,7 @@ bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, 
   }
 
   hit_record->t = root;
-  hit_record->p = ray_at(*ray, root);
+  hit_record->p = ray_at(ray, root);
 
   Vec3 outward_normal = vec3_div(vec3_sub(hit_record->p, sphere->center), sphere->radius);
   hit_record->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
@@ -37,11 +37,39 @@ bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, 
 }
 
 void quad_init(Quad *quad) {
-  quad->normal = vec3_unit(vec3_cross(quad->u, quad->v));
+  Vec3 n = vec3_cross(quad->u, quad->v);
+  quad->normal = vec3_unit(n);
   quad->D = vec3_dot(quad->normal, quad->Q);
+  quad->w = vec3_div(n, vec3_length2(n));
 }
 
-bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) { return false; }
+bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+  float denom = vec3_dot(quad->normal, ray->direction);
+  if (fabs(denom) < 1e-8f)
+    return false;
+
+  float t = (quad->D - vec3_dot(quad->normal, ray->origin)) / denom;
+  if ((t < t_min) || (t > t_max))
+    return false;
+
+  Vec3 p = ray_at(ray, t);
+  Vec3 planar_hitpt_vec = vec3_sub(p, quad->Q);
+  float alpha = vec3_dot(quad->w, vec3_cross(planar_hitpt_vec, quad->v));
+  float beta = vec3_dot(quad->w, vec3_cross(quad->u, planar_hitpt_vec));
+
+  if ((alpha < 0) || (alpha > 1) || (beta < 0) || (beta > 1))
+    return false;
+
+  hit_record->u = alpha;
+  hit_record->v = beta;
+  hit_record->t = t;
+  hit_record->p = p;
+  hit_record->material = quad->material;
+  hit_record->front_face = vec3_dot(ray->direction, quad->normal) < 0.0f;
+  hit_record->normal = hit_record->front_face ? quad->normal : vec3_neg(quad->normal);
+
+  return true;
+}
 
 bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
   for (int a = 0; a < 3; a++) {

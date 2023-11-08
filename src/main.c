@@ -83,8 +83,8 @@ void scene_checker(World *world, Camera *camera) {
   };
   world_init(world);
 
-  world->colors[1] = (Vec3){0.2f, 0.3f, 0.1f};
-  world->colors[2] = (Vec3){0.9f, 0.9f, 0.9f};
+  world->colors[0] = (Vec3){0.2f, 0.3f, 0.1f};
+  world->colors[1] = (Vec3){0.9f, 0.9f, 0.9f};
   world->checkers[0] = (Checker){1e-2f, {SOLID, .color = world->colors}, {SOLID, .color = world->colors + 1}};
 
   world->materials[0] = (Material){LAMBERTIAN, {CHECKER, .checker = world->checkers}};
@@ -144,6 +144,40 @@ void scene_perlin(World *world, Camera *camera) {
   camera->focal_length = 10.0f;
 }
 
+void scene_quads(World *world, Camera *camera) {
+  *world = (World){
+      .n_quads = 5,
+      .n_materials = 5,
+      .n_colors = 5,
+  };
+  world_init(world);
+
+  world->colors[0] = (Vec3){1.0f, 0.2f, 0.2f};
+  world->colors[1] = (Vec3){0.2f, 1.0f, 0.2f};
+  world->colors[2] = (Vec3){0.2f, 0.2f, 1.0f};
+  world->colors[3] = (Vec3){1.0f, 0.5f, 0.0f};
+  world->colors[4] = (Vec3){0.2f, 0.8f, 0.8f};
+
+  world->quads[0] = (Quad){{-3.0f, -2.0f, 5.0f}, {0.0f, 0.0f, -4.0f}, {0.0f, 4.0f, 0.0f}};
+  world->quads[1] = (Quad){{-2.0f, -2.0f, 0.0f}, {4.0f, 0.0f, 0.0f}, {0.0f, 4.0f, 0.0f}};
+  world->quads[2] = (Quad){{3.0f, -2.0f, 1.0f}, {0.0f, 0.0f, 4.0f}, {0.0f, 4.0f, 0.0f}};
+  world->quads[3] = (Quad){{-2.0f, 3.0f, 1.0f}, {4.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 4.0f}};
+  world->quads[4] = (Quad){{-2.0f, -3.0f, 5.0f}, {4.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -4.0f}};
+
+  for (int i = 0; i < world->n_colors; i++) {
+    world->materials[i] = (Material){LAMBERTIAN, {SOLID, .color = world->colors + i}};
+    world->quads[i].material = world->materials + i;
+    quad_init(world->quads + i);
+  }
+
+  camera->vfov = 80.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
+  camera->look_from = (Vec3){0.0f, 0.0f, 9.0f};
+  camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
+  camera->dof_angle = 0.0f;
+  camera->focal_length = 10.0f;
+}
+
 int main(int argc, char *argv[]) {
   assert(argc > 1);
 
@@ -168,6 +202,9 @@ int main(int argc, char *argv[]) {
     break;
   case 3:
     scene_perlin(&world, &camera);
+    break;
+  case 4:
+    scene_quads(&world, &camera);
     break;
   }
   camera_init(&camera);

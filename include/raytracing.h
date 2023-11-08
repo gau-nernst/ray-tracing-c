@@ -28,7 +28,7 @@ struct Ray {
   Vec3 direction;
 };
 
-Vec3 ray_at(Ray ray, float t);
+Vec3 ray_at(const Ray *ray, float t);
 
 struct Sphere {
   Vec3 center;
@@ -44,6 +44,7 @@ typedef struct Quad {
   Vec3 v;
   Vec3 normal;
   float D;
+  Vec3 w;
   Material *material;
 } Quad;
 
