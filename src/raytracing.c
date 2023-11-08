@@ -29,8 +29,8 @@ bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, 
   Vec3 outward_normal = vec3_div(vec3_sub(hit_record->p, sphere->center), sphere->radius);
   hit_record->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
   hit_record->normal = hit_record->front_face ? outward_normal : vec3_neg(outward_normal);
-  hit_record->u = (atan2f(-outward_normal.z, outward_normal.x) + M_PI) * M_1_PI * 0.5;
-  hit_record->v = acosf(-outward_normal.y) * M_1_PI;
+  hit_record->u = (atan2f(-outward_normal.x[2], outward_normal.x[0]) + M_PI) * M_1_PI * 0.5;
+  hit_record->v = acosf(-outward_normal.x[1]) * M_1_PI;
   hit_record->material = sphere->material;
 
   return true;
@@ -145,9 +145,8 @@ void camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
       }
 
       pixel_color = vec3_div(pixel_color, (float)camera->samples_per_pixel);
-      buffer[(j * camera->img_width + i) * 3] = (int)(256.0f * clamp(sqrtf(pixel_color.x), 0.0f, 0.999f));
-      buffer[(j * camera->img_width + i) * 3 + 1] = (int)(256.0f * clamp(sqrtf(pixel_color.y), 0.0f, 0.999f));
-      buffer[(j * camera->img_width + i) * 3 + 2] = (int)(256.0f * clamp(sqrtf(pixel_color.z), 0.0f, 0.999f));
+      for (int c = 0; c < 3; c++)
+        buffer[(j * camera->img_width + i) * 3 + c] = (int)(256.0f * clamp(sqrtf(pixel_color.x[c]), 0.0f, 0.999f));
     }
   }
   fprintf(stderr, "\nDone\n");
