@@ -50,6 +50,12 @@ typedef struct Quad {
 void quad_init(Quad *quad);
 bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 
+typedef struct AABB {
+  float x[3][2];
+} AABB;
+
+bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max);
+
 struct World {
   size_t n_spheres;
   size_t n_quads;
