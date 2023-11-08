@@ -1,9 +1,9 @@
-// https://github.com/imneme/pcg-c-basic
-
 #ifndef PCG32_H
 #define PCG32_H
+
 #include <stdint.h>
 
+// https://github.com/imneme/pcg-c-basic
 typedef struct PCG32State {
   uint64_t state;
   uint64_t inc;

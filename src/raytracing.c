@@ -5,7 +5,7 @@
 
 Vec3 ray_at(Ray ray, float t) { return vec3vec3_add(ray.origin, vec3float_mul(ray.direction, t)); }
 
-bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
   float a = vec3_length2(ray->direction);
   float b = vec3_dot(oc, ray->direction);
@@ -36,11 +36,34 @@ bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, 
   return true;
 }
 
-bool hit_spheres(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+void quad_init(Quad *quad) {
+  quad->normal = vec3_unit(vec3_cross(quad->u, quad->v));
+  quad->D = vec3_dot(quad->normal, quad->Q);
+}
+
+bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) { return false; }
+
+void world_init(World *world) {
+  try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
+  try_malloc(world->quads, sizeof(Quad) * world->n_quads);
+  try_malloc(world->materials, sizeof(Material) * world->n_materials);
+  try_malloc(world->colors, sizeof(Vec3) * world->n_colors);
+  try_malloc(world->checkers, sizeof(Checker) * world->n_checkers);
+  try_malloc(world->images, sizeof(Image) * world->n_images);
+  try_malloc(world->perlins, sizeof(Perlin) * world->n_perlins);
+}
+
+bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   bool hit_anything = false;
 
   for (int i = 0; i < world->n_spheres; i++)
-    if (hit_sphere(world->spheres + i, ray, t_min, t_max, hit_record)) {
+    if (sphere_hit(world->spheres + i, ray, t_min, t_max, hit_record)) {
+      t_max = hit_record->t;
+      hit_anything = true;
+    }
+
+  for (int i = 0; i < world->n_quads; i++)
+    if (quad_hit(world->quads + i, ray, t_min, t_max, hit_record)) {
       t_max = hit_record->t;
       hit_anything = true;
     }
@@ -79,7 +102,7 @@ Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, 
     return (Vec3){0.0f, 0.0f, 0.0f};
 
   HitRecord hit_record;
-  if (hit_spheres(world, ray, 1e-3f, INFINITY, &hit_record)) {
+  if (hit_objects(world, ray, 1e-3f, INFINITY, &hit_record)) {
     Ray new_ray;
     new_ray.origin = hit_record.p;
     Vec3 scatter_color;

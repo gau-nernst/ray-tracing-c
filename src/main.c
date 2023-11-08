@@ -1,21 +1,6 @@
 #include "raytracing.h"
 #include "tiff.h"
-#include <assert.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
-
-#define try_malloc(ptr, sz) assert(((ptr = malloc(sz)) != NULL) && "Failed to allocate memory")
-
-void world_init(World *world) {
-  try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
-  try_malloc(world->materials, sizeof(Material) * world->n_materials);
-  try_malloc(world->colors, sizeof(Vec3) * world->n_colors);
-  try_malloc(world->checkers, sizeof(Checker) * world->n_checkers);
-  try_malloc(world->images, sizeof(Image) * world->n_images);
-  try_malloc(world->perlins, sizeof(Perlin) * world->n_perlins);
-}
 
 void scene_book1(World *world, Camera *camera) {
   *world = (World){
