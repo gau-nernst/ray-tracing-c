@@ -54,13 +54,13 @@ void perlin_init(Perlin *perlin, PCG32State *rng) {
 float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
 
 float perlin_noise(Perlin *perlin, Vec3 p) {
-  int i = (int)floorf(p.x);
-  int j = (int)floorf(p.y);
-  int k = (int)floorf(p.z);
+  int i = (int)floorf(p.x[0]);
+  int j = (int)floorf(p.x[1]);
+  int k = (int)floorf(p.x[2]);
 
-  float t1 = p.x - (float)i;
-  float t2 = p.y - (float)j;
-  float t3 = p.z - (float)k;
+  float t1 = p.x[0] - (float)i;
+  float t2 = p.x[1] - (float)j;
+  float t3 = p.x[2] - (float)k;
 
   float tt1 = hermitian_smoothing(t1);
   float tt2 = hermitian_smoothing(t2);
@@ -96,7 +96,7 @@ Vec3 perlin_texture_value(Perlin *perlin, Vec3 p) {
   // float value = perlin_noise(perlin, p);
   // value = (value + 1.0f) * 0.5f;
   float value = perlin_turbulence(perlin, p);
-  value = (sinf(10.0f * value + p.z) + 1.0f) * 0.5f;
+  value = (sinf(10.0f * value + p.x[2]) + 1.0f) * 0.5f;
   return (Vec3){value, value, value};
 }
 
@@ -172,5 +172,14 @@ bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scatte
   default:
     *color = (Vec3){0.0f, 0.0f, 0.0f};
     return false;
+  }
+}
+
+Vec3 emit(HitRecord *hit_record) {
+  switch (hit_record->material->type) {
+  case DIFFUSE_LIGHT:
+    return *hit_record->material->albedo.color;
+  default:
+    return (Vec3){0.0f, 0.0f, 0.0f};
   }
 }

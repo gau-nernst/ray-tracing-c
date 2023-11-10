@@ -16,9 +16,7 @@
 #define vec3_div(x, y) _Generic((y), Vec3: vec3vec3_div, float: vec3float_div)(x, y)
 
 typedef struct Vec3 {
-  float x;
-  float y;
-  float z;
+  float x[3];
 } Vec3;
 
 Vec3 vec3_neg(Vec3 u);

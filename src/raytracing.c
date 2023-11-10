@@ -3,9 +3,9 @@
 #include <math.h>
 #include <stdio.h>
 
-Vec3 ray_at(Ray ray, float t) { return vec3vec3_add(ray.origin, vec3float_mul(ray.direction, t)); }
+Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
-bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
   float a = vec3_length2(ray->direction);
   float b = vec3_dot(oc, ray->direction);
@@ -24,23 +24,110 @@ bool hit_sphere(const Sphere *sphere, const Ray *ray, float t_min, float t_max, 
   }
 
   hit_record->t = root;
-  hit_record->p = ray_at(*ray, root);
+  hit_record->p = ray_at(ray, root);
 
   Vec3 outward_normal = vec3_div(vec3_sub(hit_record->p, sphere->center), sphere->radius);
   hit_record->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
   hit_record->normal = hit_record->front_face ? outward_normal : vec3_neg(outward_normal);
-  hit_record->u = (atan2f(-outward_normal.z, outward_normal.x) + M_PI) * M_1_PI * 0.5;
-  hit_record->v = acosf(-outward_normal.y) * M_1_PI;
+  hit_record->u = (atan2f(-outward_normal.x[2], outward_normal.x[0]) + M_PI) * M_1_PI * 0.5;
+  hit_record->v = acosf(-outward_normal.x[1]) * M_1_PI;
   hit_record->material = sphere->material;
 
   return true;
 }
 
-bool hit_spheres(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+void quad_init(Quad *quad) {
+  Vec3 n = vec3_cross(quad->u, quad->v);
+  quad->normal = vec3_unit(n);
+  quad->D = vec3_dot(quad->normal, quad->Q);
+  quad->w = vec3_div(n, vec3_length2(n));
+}
+
+bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+  float denom = vec3_dot(quad->normal, ray->direction);
+  if (fabs(denom) < 1e-8f)
+    return false;
+
+  float t = (quad->D - vec3_dot(quad->normal, ray->origin)) / denom;
+  if ((t < t_min) || (t > t_max))
+    return false;
+
+  Vec3 p = ray_at(ray, t);
+  Vec3 planar_hitpt_vec = vec3_sub(p, quad->Q);
+  float alpha = vec3_dot(quad->w, vec3_cross(planar_hitpt_vec, quad->v));
+  float beta = vec3_dot(quad->w, vec3_cross(quad->u, planar_hitpt_vec));
+
+  if ((alpha < 0) || (alpha > 1) || (beta < 0) || (beta > 1))
+    return false;
+
+  hit_record->u = alpha;
+  hit_record->v = beta;
+  hit_record->t = t;
+  hit_record->p = p;
+  hit_record->material = quad->material;
+  hit_record->front_face = vec3_dot(ray->direction, quad->normal) < 0.0f;
+  hit_record->normal = hit_record->front_face ? quad->normal : vec3_neg(quad->normal);
+
+  return true;
+}
+
+bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
+  for (int a = 0; a < 3; a++) {
+    float invD = 1.0f / ray->direction.x[a];
+    float t0 = (min(aabb->x[a][0], aabb->x[a][1]) - ray->origin.x[a]) * invD;
+    float t1 = (max(aabb->x[a][0], aabb->x[a][1]) - ray->origin.x[a]) * invD;
+
+    if (invD < 0) {
+      float tmp = t0;
+      t0 = t1;
+      t1 = tmp;
+    }
+    if (t0 > t_min)
+      t_min = t0;
+    if (t1 < t_max)
+      t_max = t1;
+    if (t_max < t_min)
+      return false;
+  }
+  return true;
+}
+
+AABB aabb_pad(const AABB *aabb) {
+  float delta = 1e-4f;
+  AABB padded;
+  for (int a = 0; a < 3; a++) {
+    if (aabb->x[a][1] - aabb->x[a][0] < delta) {
+      padded.x[a][0] = aabb->x[a][0] - delta;
+      padded.x[a][1] = aabb->x[a][1] + delta;
+    } else {
+      padded.x[a][0] = aabb->x[a][0];
+      padded.x[a][1] = aabb->x[a][1];
+    }
+  }
+  return padded;
+}
+
+void world_init(World *world) {
+  try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
+  try_malloc(world->quads, sizeof(Quad) * world->n_quads);
+  try_malloc(world->materials, sizeof(Material) * world->n_materials);
+  try_malloc(world->colors, sizeof(Vec3) * world->n_colors);
+  try_malloc(world->checkers, sizeof(Checker) * world->n_checkers);
+  try_malloc(world->images, sizeof(Image) * world->n_images);
+  try_malloc(world->perlins, sizeof(Perlin) * world->n_perlins);
+}
+
+bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   bool hit_anything = false;
 
   for (int i = 0; i < world->n_spheres; i++)
-    if (hit_sphere(world->spheres + i, ray, t_min, t_max, hit_record)) {
+    if (sphere_hit(world->spheres + i, ray, t_min, t_max, hit_record)) {
+      t_max = hit_record->t;
+      hit_anything = true;
+    }
+
+  for (int i = 0; i < world->n_quads; i++)
+    if (quad_hit(world->quads + i, ray, t_min, t_max, hit_record)) {
       t_max = hit_record->t;
       hit_anything = true;
     }
@@ -74,31 +161,36 @@ void camera_init(Camera *camera) {
   camera->dof_disc_v = vec3_mul(camera->v, dof_radius);
 }
 
-Vec3 ray_color(const Ray *ray, const World *world, int depth, PCG32State *rng) {
+Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (depth <= 0)
     return (Vec3){0.0f, 0.0f, 0.0f};
 
   HitRecord hit_record;
-  if (hit_spheres(world, ray, 1e-3f, INFINITY, &hit_record)) {
+  if (hit_objects(world, ray, 1e-3f, INFINITY, &hit_record)) {
     Ray new_ray;
     new_ray.origin = hit_record.p;
-    Vec3 color;
+    Vec3 scatter_color;
 
-    if (scatter(ray->direction, &hit_record, rng, &new_ray.direction, &color))
-      return vec3_mul(ray_color(&new_ray, world, depth - 1, rng), color); // spawn new ray
-    return color;
+    if (scatter(ray->direction, &hit_record, rng, &new_ray.direction, &scatter_color))
+      scatter_color =
+          vec3_mul(camera_ray_color(camera, &new_ray, world, depth - 1, rng), scatter_color); // spawn new ray
+
+    return vec3_add(scatter_color, emit(&hit_record));
   }
 
   // scene background
-  Vec3 direction = vec3_unit(ray->direction);
-  float a = 0.5f * (direction.y + 1.0f); // [-1,1] -> [0,1]
+  return camera->background;
 
-  Vec3 WHITE = {1.0f, 1.0f, 1.0f};
-  Vec3 BLUE = {0.5f, 0.7f, 1.0f};
-  return vec3_lerp(WHITE, BLUE, a);
+  // old background
+  // Vec3 direction = vec3_unit(ray->direction);
+  // float a = 0.5f * (direction.y + 1.0f); // [-1,1] -> [0,1]
+
+  // Vec3 WHITE = {1.0f, 1.0f, 1.0f};
+  // Vec3 BLUE = {0.5f, 0.7f, 1.0f};
+  // return vec3_lerp(WHITE, BLUE, a);
 }
 
-void camera_render(Camera *camera, World *world, uint8_t *buffer) {
+void camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
   for (int j = 0; j < camera->img_height; j++) {
     fprintf(stderr, "\rScanlines remaining: %d", camera->img_height - j);
 
@@ -136,13 +228,12 @@ void camera_render(Camera *camera, World *world, uint8_t *buffer) {
         ray.direction = vec3_add(pixel_pos, vec3_mul(camera->pixel_delta_u, px), vec3_mul(camera->pixel_delta_v, py),
                                  vec3_neg(ray.origin));
 
-        pixel_color = vec3_add(pixel_color, ray_color(&ray, world, camera->max_depth, &rng));
+        pixel_color = vec3_add(pixel_color, camera_ray_color(camera, &ray, world, camera->max_depth, &rng));
       }
 
       pixel_color = vec3_div(pixel_color, (float)camera->samples_per_pixel);
-      buffer[(j * camera->img_width + i) * 3] = (int)(256.0f * clamp(sqrtf(pixel_color.x), 0.0f, 0.999f));
-      buffer[(j * camera->img_width + i) * 3 + 1] = (int)(256.0f * clamp(sqrtf(pixel_color.y), 0.0f, 0.999f));
-      buffer[(j * camera->img_width + i) * 3 + 2] = (int)(256.0f * clamp(sqrtf(pixel_color.z), 0.0f, 0.999f));
+      for (int c = 0; c < 3; c++)
+        buffer[(j * camera->img_width + i) * 3 + c] = (int)(256.0f * clamp(sqrtf(pixel_color.x[c]), 0.0f, 0.999f));
     }
   }
   fprintf(stderr, "\nDone\n");

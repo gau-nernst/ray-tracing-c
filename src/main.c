@@ -1,21 +1,6 @@
 #include "raytracing.h"
 #include "tiff.h"
-#include <assert.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
-
-#define try_malloc(ptr, sz) assert(((ptr = malloc(sz)) != NULL) && "Failed to allocate memory")
-
-void world_init(World *world) {
-  try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
-  try_malloc(world->materials, sizeof(Material) * world->n_materials);
-  try_malloc(world->colors, sizeof(Vec3) * world->n_colors);
-  try_malloc(world->checkers, sizeof(Checker) * world->n_checkers);
-  try_malloc(world->images, sizeof(Image) * world->n_images);
-  try_malloc(world->perlins, sizeof(Perlin) * world->n_perlins);
-}
 
 void scene_book1(World *world, Camera *camera) {
   *world = (World){
@@ -82,10 +67,10 @@ void scene_book1(World *world, Camera *camera) {
   world->n_colors = index;
 
   camera->vfov = 20.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
   camera->dof_angle = 0.6f;
-  camera->focal_length = 10.0f;
 }
 
 void scene_checker(World *world, Camera *camera) {
@@ -97,8 +82,8 @@ void scene_checker(World *world, Camera *camera) {
   };
   world_init(world);
 
-  world->colors[1] = (Vec3){0.2f, 0.3f, 0.1f};
-  world->colors[2] = (Vec3){0.9f, 0.9f, 0.9f};
+  world->colors[0] = (Vec3){0.2f, 0.3f, 0.1f};
+  world->colors[1] = (Vec3){0.9f, 0.9f, 0.9f};
   world->checkers[0] = (Checker){1e-2f, {SOLID, .color = world->colors}, {SOLID, .color = world->colors + 1}};
 
   world->materials[0] = (Material){LAMBERTIAN, {CHECKER, .checker = world->checkers}};
@@ -106,10 +91,9 @@ void scene_checker(World *world, Camera *camera) {
   world->spheres[1] = (Sphere){{0.0f, 10.0f, 0.0f}, 10.0f, world->materials};
 
   camera->vfov = 20.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
-  camera->dof_angle = 0.0f;
-  camera->focal_length = 10.0f;
 }
 
 void scene_earth(World *world, Camera *camera) {
@@ -125,10 +109,9 @@ void scene_earth(World *world, Camera *camera) {
   world->spheres[0] = (Sphere){{0.0f, 0.0f, 0.0f}, 2.0f, world->materials};
 
   camera->vfov = 20.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
-  camera->dof_angle = 0.0f;
-  camera->focal_length = 10.0f;
 }
 
 void scene_perlin(World *world, Camera *camera) {
@@ -145,14 +128,119 @@ void scene_perlin(World *world, Camera *camera) {
   world->perlins[0].scale = 4.0f;
   world->perlins[0].depth = 7;
   world->materials[0] = (Material){LAMBERTIAN, {PERLIN, .perlin = world->perlins}};
+
   world->spheres[0] = (Sphere){{0.0f, -1000.0f, 0.0f}, 1000.0f, world->materials};
   world->spheres[1] = (Sphere){{0.0f, 2.0f, 0.0f}, 2.0f, world->materials};
 
   camera->vfov = 20.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
   camera->look_from = (Vec3){13.0f, 2.0f, 3.0f};
   camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
   camera->dof_angle = 0.0f;
   camera->focal_length = 10.0f;
+}
+
+void scene_quads(World *world, Camera *camera) {
+  *world = (World){
+      .n_quads = 5,
+      .n_materials = 5,
+      .n_colors = 5,
+  };
+  world_init(world);
+
+  world->colors[0] = (Vec3){1.0f, 0.2f, 0.2f};
+  world->colors[1] = (Vec3){0.2f, 1.0f, 0.2f};
+  world->colors[2] = (Vec3){0.2f, 0.2f, 1.0f};
+  world->colors[3] = (Vec3){1.0f, 0.5f, 0.0f};
+  world->colors[4] = (Vec3){0.2f, 0.8f, 0.8f};
+
+  world->quads[0] = (Quad){{-3.0f, -2.0f, 5.0f}, {0.0f, 0.0f, -4.0f}, {0.0f, 4.0f, 0.0f}};
+  world->quads[1] = (Quad){{-2.0f, -2.0f, 0.0f}, {4.0f, 0.0f, 0.0f}, {0.0f, 4.0f, 0.0f}};
+  world->quads[2] = (Quad){{3.0f, -2.0f, 1.0f}, {0.0f, 0.0f, 4.0f}, {0.0f, 4.0f, 0.0f}};
+  world->quads[3] = (Quad){{-2.0f, 3.0f, 1.0f}, {4.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 4.0f}};
+  world->quads[4] = (Quad){{-2.0f, -3.0f, 5.0f}, {4.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -4.0f}};
+
+  for (int i = 0; i < world->n_colors; i++) {
+    world->materials[i] = (Material){LAMBERTIAN, {SOLID, .color = world->colors + i}};
+    world->quads[i].material = world->materials + i;
+    quad_init(world->quads + i);
+  }
+
+  camera->vfov = 80.0f;
+  camera->background = (Vec3){0.7f, 0.8f, 1.0f};
+  camera->look_from = (Vec3){0.0f, 0.0f, 9.0f};
+  camera->look_to = (Vec3){0.0f, 0.0f, 0.0f};
+}
+
+void scene_simple_light(World *world, Camera *camera) {
+  *world = (World){
+      .n_spheres = 3,
+      .n_quads = 1,
+      .n_materials = 2,
+      .n_colors = 1,
+      .n_perlins = 1,
+  };
+  world_init(world);
+
+  PCG32State rng;
+  pcg32_seed(&rng, 19, 29);
+  perlin_init(world->perlins, &rng);
+  world->perlins[0].scale = 4.0f;
+  world->perlins[0].depth = 7;
+  world->materials[0] = (Material){LAMBERTIAN, {PERLIN, .perlin = world->perlins}};
+
+  world->colors[0] = (Vec3){4.0f, 4.0f, 4.0f};
+  world->materials[1] = (Material){DIFFUSE_LIGHT, {SOLID, .color = world->colors}};
+
+  world->spheres[0] = (Sphere){{0.0f, -1000.0f, 0.0f}, 1000.0f, world->materials};
+  world->spheres[1] = (Sphere){{0.0f, 2.0f, 0.0f}, 2.0f, world->materials};
+  world->spheres[2] = (Sphere){{0.0f, 7.0f, 0.0f}, 2.0f, world->materials + 1};
+  world->quads[0] =
+      (Quad){{3.0f, 1.0f, -2.0f}, {2.0f, 0.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, .material = world->materials + 1};
+  quad_init(world->quads);
+
+  camera->vfov = 20.0f;
+  camera->background = (Vec3){0.0f, 0.0f, 0.0f};
+  camera->look_from = (Vec3){26.0f, 3.0f, 6.0f};
+  camera->look_to = (Vec3){0.0f, 2.0f, 0.0f};
+}
+
+void scene_cornell_box(World *world, Camera *camera) {
+  *world = (World){
+      .n_quads = 6,
+      .n_colors = 4,
+      .n_materials = 4,
+  };
+  world_init(world);
+
+  world->colors[0] = (Vec3){0.65f, 0.05f, 0.05f};
+  world->colors[1] = (Vec3){0.73f, 0.73f, 0.73f};
+  world->colors[2] = (Vec3){0.12f, 0.45f, 0.15f};
+  world->colors[3] = (Vec3){15.0f, 15.0f, 15.0f};
+
+  for (int i = 0; i < 3; i++)
+    world->materials[i] = (Material){LAMBERTIAN, {SOLID, .color = world->colors + i}};
+  world->materials[3] = (Material){DIFFUSE_LIGHT, {SOLID, .color = world->colors + 3}};
+
+  Material *red = world->materials;
+  Material *white = world->materials + 1;
+  Material *green = world->materials + 2;
+  Material *light = world->materials + 3;
+
+  world->quads[0] = (Quad){{555.0f, 0.0f, 0.0f}, {0.0f, 555.0f, 0.0f}, {0.0f, 0.0f, 555.0f}, .material = green};
+  world->quads[1] = (Quad){{0.0f, 0.0f, 0.0f}, {0.0f, 555.0f, 0.0f}, {0.0f, 0.0f, 555.0f}, .material = red};
+  world->quads[2] = (Quad){{343.0f, 554.0f, 332.0f}, {-130.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -105.0f}, .material = light};
+  world->quads[3] = (Quad){{0.0f, 0.0f, 0.0f}, {555.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 555.0f}, .material = white};
+  world->quads[4] = (Quad){{555.0f, 555.0f, 555.0f}, {-555.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -555.0f}, .material = white};
+  world->quads[5] = (Quad){{0.0f, 0.0f, 555.0f}, {555.0f, 0.0f, 0.0f}, {0.0f, 555.0f, 0.0f}, .material = white};
+  for (int i = 0; i < 6; i++)
+    quad_init(world->quads + i);
+
+  camera->aspect_ratio = 1.0f;
+  camera->background = (Vec3){0.0f, 0.0f, 0.0f};
+  camera->vfov = 40.0f;
+  camera->look_from = (Vec3){278.0f, 278.0f, -800.0f};
+  camera->look_to = (Vec3){278.0f, 278.0f, 0.0f};
 }
 
 int main(int argc, char *argv[]) {
@@ -162,9 +250,16 @@ int main(int argc, char *argv[]) {
   Camera camera;
   camera.aspect_ratio = 16.0f / 9.0f;
   camera.img_width = 400;
-  camera.samples_per_pixel = 10;
-  camera.max_depth = 10;
+  camera.samples_per_pixel = 100;
+  camera.max_depth = 50;
   camera.vup = (Vec3){0.0f, 1.0f, 0.0f};
+  camera.dof_angle = 0.0f;
+  camera.focal_length = 10.0f;
+
+  if (argc > 3)
+    camera.img_width = strtol(argv[2], NULL, 10);
+  if (argc > 4)
+    camera.samples_per_pixel = strtol(argv[3], NULL, 10);
 
   switch (strtol(argv[1], NULL, 10)) {
   default:
@@ -180,6 +275,13 @@ int main(int argc, char *argv[]) {
   case 3:
     scene_perlin(&world, &camera);
     break;
+  case 4:
+    scene_quads(&world, &camera);
+    break;
+  case 5:
+    scene_simple_light(&world, &camera);
+  case 6:
+    scene_cornell_box(&world, &camera);
   }
   camera_init(&camera);
 

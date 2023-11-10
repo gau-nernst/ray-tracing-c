@@ -6,9 +6,8 @@
 typedef struct Material Material;
 typedef struct Checker Checker;
 typedef struct Texture Texture;
-typedef struct HitRecord HitRecord;
 
-struct HitRecord {
+typedef struct HitRecord {
   Vec3 p;
   Vec3 normal;
   Material *material;
@@ -16,7 +15,7 @@ struct HitRecord {
   float u;
   float v;
   bool front_face;
-};
+} HitRecord;
 
 typedef struct Image {
   int width;
@@ -68,6 +67,7 @@ struct Material {
     LAMBERTIAN,
     METAL,
     DIELECTRIC,
+    DIFFUSE_LIGHT,
   } type;
   Texture albedo;
   float fuzz;
@@ -75,5 +75,6 @@ struct Material {
 };
 
 bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color);
+Vec3 emit(HitRecord *hit_record);
 
 #endif // MATERIAL_H
