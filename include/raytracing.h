@@ -36,7 +36,7 @@ typedef struct Quad {
   Material *material;
 } Quad;
 
-void quad_init(Quad *quad);
+void quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material);
 
 typedef struct AABB {
   float x[3][2];

@@ -40,7 +40,12 @@ static bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float 
   return true;
 }
 
-void quad_init(Quad *quad) {
+void quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material) {
+  quad->Q = Q;
+  quad->u = u;
+  quad->v = v;
+  quad->material = material;
+
   Vec3 n = vec3_cross(quad->u, quad->v);
   quad->normal = vec3_unit(n);
   quad->D = vec3_dot(quad->normal, quad->Q);
