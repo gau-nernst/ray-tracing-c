@@ -5,6 +5,8 @@
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
+Sphere sphere(Vec3 center, float radius, Material *material) { return (Sphere){center, radius, material}; }
+
 static bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
   float a = vec3_length2(ray->direction);
@@ -107,14 +109,20 @@ AABB aabb_pad(const AABB *aabb) {
   return padded;
 }
 
+void *my_malloc(size_t size) {
+  void *ptr = malloc(size);
+  assert((ptr != NULL) && "Failed to allocate memory");
+  return ptr;
+}
+
 void world_malloc(World *world) {
-  try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
-  try_malloc(world->quads, sizeof(Quad) * world->n_quads);
-  try_malloc(world->materials, sizeof(Material) * world->n_materials);
-  try_malloc(world->colors, sizeof(Vec3) * world->n_colors);
-  try_malloc(world->checkers, sizeof(Checker) * world->n_checkers);
-  try_malloc(world->images, sizeof(Image) * world->n_images);
-  try_malloc(world->perlins, sizeof(Perlin) * world->n_perlins);
+  world->spheres = my_malloc(sizeof(Sphere) * world->n_spheres);
+  world->quads = my_malloc(sizeof(Quad) * world->n_quads);
+  world->materials = my_malloc(sizeof(Material) * world->n_materials);
+  world->colors = my_malloc(sizeof(Vec3) * world->n_colors);
+  world->checkers = my_malloc(sizeof(Checker) * world->n_checkers);
+  world->images = my_malloc(sizeof(Image) * world->n_images);
+  world->perlins = my_malloc(sizeof(Perlin) * world->n_perlins);
 }
 
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {

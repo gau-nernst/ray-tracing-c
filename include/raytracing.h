@@ -16,8 +16,6 @@
 #endif
 #define clamp(x, lo, hi) min(max(x, lo), hi)
 
-#define try_malloc(ptr, sz) assert(((ptr = malloc(sz)) != NULL) && "Failed to allocate memory")
-
 typedef struct Ray Ray;
 typedef struct Sphere Sphere;
 typedef struct World World;
@@ -35,6 +33,8 @@ struct Sphere {
   float radius;
   Material *material;
 };
+
+Sphere sphere(Vec3 center, float radius, Material *material);
 
 typedef struct Quad {
   Vec3 Q;
@@ -70,6 +70,7 @@ struct World {
   Perlin *perlins;
 };
 
+void *my_malloc(size_t size);
 void world_malloc(World *world);
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 
