@@ -75,7 +75,7 @@ struct World {
   Perlin *perlins;
 };
 
-void world_init(World *world);
+void world_malloc(World *world);
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 
 struct Camera {

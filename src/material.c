@@ -25,11 +25,8 @@ Vec3 image_texture_value(Image *image, float u, float v) {
   int i = (int)roundf(u * (float)(image->width - 1));
   int j = (int)roundf((1.0f - v) * (float)(image->height - 1));
   int offset = ((j * image->width) + i) * 3;
-  return (Vec3){
-      (float)image->buffer[offset] / 255.0f,
-      (float)image->buffer[offset + 1] / 255.0f,
-      (float)image->buffer[offset + 2] / 255.0f,
-  };
+  return vec3((float)image->buffer[offset] / 255.0f, (float)image->buffer[offset + 1] / 255.0f,
+              (float)image->buffer[offset + 2] / 255.0f);
 }
 
 void perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
@@ -97,7 +94,7 @@ Vec3 perlin_texture_value(Perlin *perlin, Vec3 p) {
   // value = (value + 1.0f) * 0.5f;
   float value = perlin_turbulence(perlin, p);
   value = (sinf(10.0f * value + p.x[2]) + 1.0f) * 0.5f;
-  return (Vec3){value, value, value};
+  return vec3(value, value, value);
 }
 
 Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
@@ -111,7 +108,7 @@ Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
   case PERLIN:
     return perlin_texture_value(texture.perlin, p);
   default:
-    return (Vec3){0.0f, 0.0f, 0.0f};
+    return vec3_zero();
   }
 }
 
@@ -170,7 +167,7 @@ bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scatte
   case DIELECTRIC:
     return scatter_dielectric(incident, hit_record, rng, scattered, color);
   default:
-    *color = (Vec3){0.0f, 0.0f, 0.0f};
+    *color = vec3_zero();
     return false;
   }
 }
@@ -180,6 +177,6 @@ Vec3 emit(HitRecord *hit_record) {
   case DIFFUSE_LIGHT:
     return *hit_record->material->albedo.color;
   default:
-    return (Vec3){0.0f, 0.0f, 0.0f};
+    return vec3_zero();
   }
 }

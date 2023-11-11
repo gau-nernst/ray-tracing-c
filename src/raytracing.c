@@ -107,7 +107,7 @@ AABB aabb_pad(const AABB *aabb) {
   return padded;
 }
 
-void world_init(World *world) {
+void world_malloc(World *world) {
   try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
   try_malloc(world->quads, sizeof(Quad) * world->n_quads);
   try_malloc(world->materials, sizeof(Material) * world->n_materials);
@@ -163,7 +163,7 @@ void camera_init(Camera *camera) {
 
 Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (depth <= 0)
-    return (Vec3){0.0f, 0.0f, 0.0f};
+    return vec3_zero();
 
   HitRecord hit_record;
   if (hit_objects(world, ray, 1e-3f, INFINITY, &hit_record)) {
@@ -202,7 +202,7 @@ void camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
 
       Vec3 pixel_pos = vec3_add(camera->pixel00_loc, vec3_mul(camera->pixel_delta_u, (float)i),
                                 vec3_mul(camera->pixel_delta_v, (float)j));
-      Vec3 pixel_color = {0.0f, 0.0f, 0.0f};
+      Vec3 pixel_color = vec3_zero();
 
       for (int sample = 0; sample < camera->samples_per_pixel; sample++) {
         // square sampling
