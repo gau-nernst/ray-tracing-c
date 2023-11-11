@@ -1,7 +1,9 @@
 #include "raytracing.h"
+#include "utils.h"
+#include <stdio.h>
+
 #define _USE_MATH_DEFINES // for MSVC
 #include <math.h>
-#include <stdio.h>
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
@@ -107,12 +109,6 @@ AABB aabb_pad(const AABB *aabb) {
     }
   }
   return padded;
-}
-
-void *my_malloc(size_t size) {
-  void *ptr = malloc(size);
-  assert((ptr != NULL) && "Failed to allocate memory");
-  return ptr;
 }
 
 void world_malloc(World *world) {

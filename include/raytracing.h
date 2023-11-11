@@ -3,18 +3,8 @@
 
 #include "material.h"
 #include "vec3.h"
-#include <assert.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
-
-#ifndef min
-#define min(x, y) ((x) < (y) ? (x) : (y))
-#endif
-#ifndef max
-#define max(x, y) ((x) > (y) ? (x) : (y))
-#endif
-#define clamp(x, lo, hi) min(max(x, lo), hi)
 
 typedef struct Ray Ray;
 typedef struct Sphere Sphere;
@@ -70,7 +60,6 @@ struct World {
   Perlin *perlins;
 };
 
-void *my_malloc(size_t size);
 void world_malloc(World *world);
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 
