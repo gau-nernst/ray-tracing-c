@@ -10,11 +10,11 @@ void scene_book1(World *world, Camera *camera) {
   };
   world_malloc(world);
 
-  world->colors[0] = vec3(0.5f, 0.5f, 0.5f);
+  world->colors[0] = vec3_full(0.5f);
   world->materials[0] = (Material){LAMBERTIAN, {SOLID, .color = world->colors}};
   world->spheres[0] = (Sphere){{0.0f, -1000.0f, -1.0f}, 1000.0f, world->materials};
 
-  world->colors[1] = vec3(1.0f, 1.0f, 1.0f);
+  world->colors[1] = vec3_full(1.0f);
   world->materials[1] = (Material){DIELECTRIC, {SOLID, .color = world->colors + 1}, 0.0f, 1.5f};
   world->spheres[1] = (Sphere){{0.0f, 1.0f, 0.0f}, 1.0f, world->materials + 1};
 
@@ -55,7 +55,7 @@ void scene_book1(World *world, Camera *camera) {
           material->fuzz = pcg32_f32(&rng) * 0.5f;
         } else {
           material->type = DIELECTRIC;
-          *color = vec3(1.0f, 1.0f, 1.0f);
+          *color = vec3_full(1.0f);
           material->eta = 1.5f;
         }
 
@@ -237,7 +237,7 @@ void scene_cornell_box(World *world, Camera *camera) {
     quad_init(world->quads + i);
 
   camera->aspect_ratio = 1.0f;
-  camera->background = vec3(0.0f, 0.0f, 0.0f);
+  camera->background = vec3_zero();
   camera->vfov = 40.0f;
   camera->look_from = vec3(278.0f, 278.0f, -800.0f);
   camera->look_to = vec3(278.0f, 278.0f, 0.0f);
