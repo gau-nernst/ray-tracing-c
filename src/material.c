@@ -5,7 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 
-Vec3 checker_texture_value(Checker *checker, float u, float v, Vec3 p) {
+static Vec3 checker_texture_value(Checker *checker, float u, float v, Vec3 p) {
   // int x = (int)floorf(p.x / texture->scale);
   // int y = (int)floorf(p.y / texture->scale);
   // int z = (int)floorf(p.z / texture->scale);
@@ -29,7 +29,7 @@ Vec3 image_texture_value(Image *image, float u, float v) {
               (float)image->buffer[offset + 2] / 255.0f);
 }
 
-void perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
+static void perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
   for (int i = 0; i < N_PERLIN; i++)
     perm[i] = i;
   for (int i = N_PERLIN - 1; i > 0; i--) {
@@ -48,9 +48,9 @@ void perlin_init(Perlin *perlin, PCG32State *rng) {
   perlin_permute(perlin->perm_z, rng);
 }
 
-float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
+static float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
 
-float perlin_noise(Perlin *perlin, Vec3 p) {
+static float perlin_noise(Perlin *perlin, Vec3 p) {
   int i = (int)floorf(p.x[0]);
   int j = (int)floorf(p.x[1]);
   int k = (int)floorf(p.x[2]);
@@ -77,7 +77,7 @@ float perlin_noise(Perlin *perlin, Vec3 p) {
   return value;
 }
 
-float perlin_turbulence(Perlin *perlin, Vec3 p) {
+static float perlin_turbulence(Perlin *perlin, Vec3 p) {
   float value = 0.0f;
   float weight = 1.0f;
   for (int i = 0; i < perlin->depth; i++) {
@@ -88,7 +88,7 @@ float perlin_turbulence(Perlin *perlin, Vec3 p) {
   return fabs(value);
 }
 
-Vec3 perlin_texture_value(Perlin *perlin, Vec3 p) {
+static Vec3 perlin_texture_value(Perlin *perlin, Vec3 p) {
   p = vec3_mul(p, perlin->scale);
   // float value = perlin_noise(perlin, p);
   // value = (value + 1.0f) * 0.5f;
@@ -112,7 +112,7 @@ Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
   }
 }
 
-bool scatter_lambertian(HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool scatter_lambertian(HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   Vec3 new_direction = vec3_add(hit_record->normal, vec3_rand_unit_vector(rng));
   if (vec3_near_zero(new_direction))
     new_direction = hit_record->normal;
@@ -121,18 +121,18 @@ bool scatter_lambertian(HitRecord *hit_record, PCG32State *rng, Vec3 *scattered,
   return true;
 }
 
-Vec3 reflect(Vec3 incident, Vec3 normal) {
+static Vec3 reflect(Vec3 incident, Vec3 normal) {
   return vec3_sub(incident, vec3_mul(normal, 2.0f * vec3_dot(incident, normal)));
 }
 
-bool scatter_metal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool scatter_metal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   *scattered =
       vec3_add(reflect(incident, hit_record->normal), vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->fuzz));
   *color = texture_value(hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return vec3_dot(*scattered, hit_record->normal) > 0; // check for degeneration
 }
 
-bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   float eta = hit_record->front_face ? 1.0f / hit_record->material->eta : hit_record->material->eta;
   incident = vec3_unit(incident);
 

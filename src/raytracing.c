@@ -5,7 +5,7 @@
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
-bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+static bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
   float a = vec3_length2(ray->direction);
   float b = vec3_dot(oc, ray->direction);
@@ -43,7 +43,7 @@ void quad_init(Quad *quad) {
   quad->w = vec3_div(n, vec3_length2(n));
 }
 
-bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+static bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   float denom = vec3_dot(quad->normal, ray->direction);
   if (fabs(denom) < 1e-8f)
     return false;
@@ -71,7 +71,7 @@ bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRec
   return true;
 }
 
-bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
+static bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
   for (int a = 0; a < 3; a++) {
     float invD = 1.0f / ray->direction.x[a];
     float t0 = (min(aabb->x[a][0], aabb->x[a][1]) - ray->origin.x[a]) * invD;
@@ -161,7 +161,7 @@ void camera_init(Camera *camera) {
   camera->dof_disc_v = vec3_mul(camera->v, dof_radius);
 }
 
-Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
+static Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (depth <= 0)
     return vec3_zero();
 
