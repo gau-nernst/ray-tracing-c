@@ -1,3 +1,6 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <assert.h>
 #include <stdlib.h>
 
@@ -14,3 +17,5 @@ inline void *my_malloc(size_t size) {
   assert((ptr != NULL) && "Failed to allocate memory");
   return ptr;
 }
+
+#endif // UTILS_H

@@ -5,7 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 
-static Vec3 checker_texture_value(Checker *checker, float u, float v, Vec3 p) {
+static Vec3 checker_value(Checker *checker, float u, float v, Vec3 p) {
   // int x = (int)floorf(p.x / texture->scale);
   // int y = (int)floorf(p.y / texture->scale);
   // int z = (int)floorf(p.z / texture->scale);
@@ -19,7 +19,7 @@ void image_load(Image *image, char *filename) {
   image->buffer = stbi_load(filename, &image->width, &image->height, NULL, 3);
 }
 
-Vec3 image_texture_value(Image *image, float u, float v) {
+Vec3 image_value(Image *image, float u, float v) {
   // nearest neighbour sampling
   // flip v to image coordinates
   int i = (int)roundf(u * (float)(image->width - 1));
@@ -88,7 +88,7 @@ static float perlin_turbulence(Perlin *perlin, Vec3 p) {
   return fabs(value);
 }
 
-static Vec3 perlin_texture_value(Perlin *perlin, Vec3 p) {
+static Vec3 perlin_value(Perlin *perlin, Vec3 p) {
   p = vec3_mul(p, perlin->scale);
   // float value = perlin_noise(perlin, p);
   // value = (value + 1.0f) * 0.5f;
@@ -97,22 +97,38 @@ static Vec3 perlin_texture_value(Perlin *perlin, Vec3 p) {
   return vec3(value, value, value);
 }
 
+Texture texture(enum TextureType type, void *ptr) { return (Texture){type, ptr}; }
+
 Vec3 texture_value(Texture texture, float u, float v, Vec3 p) {
   switch (texture.type) {
   case SOLID:
-    return *texture.color;
+    return *(Vec3 *)texture.ptr;
   case CHECKER:
-    return checker_texture_value(texture.checker, u, v, p);
+    return checker_value(texture.ptr, u, v, p);
   case IMAGE:
-    return image_texture_value(texture.image, u, v);
+    return image_value(texture.ptr, u, v);
   case PERLIN:
-    return perlin_texture_value(texture.perlin, p);
+    return perlin_value(texture.ptr, p);
   default:
     return vec3_zero();
   }
 }
 
-static bool scatter_lambertian(HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+Material surface_normal() { return (Material){SURFACE_NORMAL}; }
+
+Material lambertian_color(Vec3 *color) { return lambertian_texture(texture(SOLID, color)); }
+Material lambertian_texture(Texture albedo) { return (Material){LAMBERTIAN, albedo}; }
+
+Material metal_color(Vec3 *color, float fuzz) { return metal_texture(texture(SOLID, color), fuzz); }
+Material metal_texture(Texture albedo, float fuzz) { return (Material){METAL, albedo, .fuzz = fuzz}; }
+
+Material dielectric_color(Vec3 *color, float eta) { return dielectric_texture(texture(SOLID, color), eta); }
+Material dielectric_texture(Texture albedo, float eta) { return (Material){DIELECTRIC, albedo, .eta = eta}; }
+
+Material diffuse_light_color(Vec3 *color) { return diffuse_light_texture(texture(SOLID, color)); }
+Material diffuse_light_texture(Texture albedo) { return (Material){DIFFUSE_LIGHT, albedo}; }
+
+static bool lambertian_scatter(HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   Vec3 new_direction = vec3_add(hit_record->normal, vec3_rand_unit_vector(rng));
   if (vec3_near_zero(new_direction))
     new_direction = hit_record->normal;
@@ -125,14 +141,14 @@ static Vec3 reflect(Vec3 incident, Vec3 normal) {
   return vec3_sub(incident, vec3_mul(normal, 2.0f * vec3_dot(incident, normal)));
 }
 
-static bool scatter_metal(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool metal_scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   *scattered =
       vec3_add(reflect(incident, hit_record->normal), vec3_mul(vec3_rand_unit_vector(rng), hit_record->material->fuzz));
   *color = texture_value(hit_record->material->albedo, hit_record->u, hit_record->v, hit_record->p);
   return vec3_dot(*scattered, hit_record->normal) > 0; // check for degeneration
 }
 
-static bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool dielectric_scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   float eta = hit_record->front_face ? 1.0f / hit_record->material->eta : hit_record->material->eta;
   incident = vec3_unit(incident);
 
@@ -157,15 +173,15 @@ static bool scatter_dielectric(Vec3 incident, HitRecord *hit_record, PCG32State 
 
 bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   switch (hit_record->material->type) {
-  case NORMAL:
+  case SURFACE_NORMAL:
     *color = vec3float_mul(vec3_add(hit_record->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
     return false;
   case LAMBERTIAN:
-    return scatter_lambertian(hit_record, rng, scattered, color);
+    return lambertian_scatter(hit_record, rng, scattered, color);
   case METAL:
-    return scatter_metal(incident, hit_record, rng, scattered, color);
+    return metal_scatter(incident, hit_record, rng, scattered, color);
   case DIELECTRIC:
-    return scatter_dielectric(incident, hit_record, rng, scattered, color);
+    return dielectric_scatter(incident, hit_record, rng, scattered, color);
   default:
     *color = vec3_zero();
     return false;
@@ -175,7 +191,7 @@ bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scatte
 Vec3 emit(HitRecord *hit_record) {
   switch (hit_record->material->type) {
   case DIFFUSE_LIGHT:
-    return *hit_record->material->albedo.color;
+    return *(Vec3 *)hit_record->material->albedo.ptr;
   default:
     return vec3_zero();
   }

@@ -116,27 +116,25 @@ AABB aabb_pad(const AABB *aabb) {
   return padded;
 }
 
-void world_malloc(World *world) {
-  world->spheres = my_malloc(sizeof(Sphere) * world->n_spheres);
-  world->quads = my_malloc(sizeof(Quad) * world->n_quads);
-  world->materials = my_malloc(sizeof(Material) * world->n_materials);
-  world->colors = my_malloc(sizeof(Vec3) * world->n_colors);
-  world->checkers = my_malloc(sizeof(Checker) * world->n_checkers);
-  world->images = my_malloc(sizeof(Image) * world->n_images);
-  world->perlins = my_malloc(sizeof(Perlin) * world->n_perlins);
-}
+define_array_source(Vec3);
+define_array_source(Sphere);
+define_array_source(Quad);
+define_array_source(Material);
+define_array_source(Checker);
+define_array_source(Image);
+define_array_source(Perlin);
 
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   bool hit_anything = false;
 
-  for (int i = 0; i < world->n_spheres; i++)
-    if (sphere_hit(world->spheres + i, ray, t_min, t_max, hit_record)) {
+  for (int i = 0; i < world->spheres.size; i++)
+    if (sphere_hit(world->spheres.items + i, ray, t_min, t_max, hit_record)) {
       t_max = hit_record->t;
       hit_anything = true;
     }
 
-  for (int i = 0; i < world->n_quads; i++)
-    if (quad_hit(world->quads + i, ray, t_min, t_max, hit_record)) {
+  for (int i = 0; i < world->quads.size; i++)
+    if (quad_hit(world->quads.items + i, ray, t_min, t_max, hit_record)) {
       t_max = hit_record->t;
       hit_anything = true;
     }

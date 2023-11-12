@@ -1,28 +1,27 @@
 #ifndef RAYTRACING_H
 #define RAYTRACING_H
 
+#include "array.h"
 #include "material.h"
 #include "vec3.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
-typedef struct Ray Ray;
-typedef struct Sphere Sphere;
 typedef struct World World;
 typedef struct Camera Camera;
 
-struct Ray {
+typedef struct Ray {
   Vec3 origin;
   Vec3 direction;
-};
+} Ray;
 
 Vec3 ray_at(const Ray *ray, float t);
 
-struct Sphere {
+typedef struct Sphere {
   Vec3 center;
   float radius;
   Material *material;
-};
+} Sphere;
 
 Sphere sphere(Vec3 center, float radius, Material *material);
 
@@ -42,25 +41,42 @@ typedef struct AABB {
   float x[3][2];
 } AABB;
 
-struct World {
-  size_t n_spheres;
-  size_t n_quads;
-  size_t n_materials;
-  size_t n_colors;
-  size_t n_checkers;
-  size_t n_images;
-  size_t n_perlins;
+define_array_header(Vec3);
+define_array_header(Sphere);
+define_array_header(Quad);
+define_array_header(Material);
+define_array_header(Checker);
+define_array_header(Image);
+define_array_header(Perlin);
 
-  Sphere *spheres;
-  Quad *quads;
-  Material *materials;
-  Vec3 *colors;
-  Checker *checkers;
-  Image *images;
-  Perlin *perlins;
+#define array_append(array, obj)                                                                                       \
+  _Generic((array),                                                                                                    \
+      Vec3Array *: Vec3Array_append,                                                                                   \
+      SphereArray *: SphereArray_append,                                                                               \
+      MaterialArray *: MaterialArray_append,                                                                           \
+      CheckerArray *: CheckerArray_append,                                                                             \
+      ImageArray *: ImageArray_append,                                                                                 \
+      PerlinArray *: PerlinArray_append)(array, obj)
+
+#define array_next(array)                                                                                              \
+  _Generic((array),                                                                                                    \
+      Vec3Array *: Vec3Array_next,                                                                                     \
+      SphereArray *: SphereArray_next,                                                                                 \
+      MaterialArray *: MaterialArray_next,                                                                             \
+      CheckerArray *: CheckerArray_next,                                                                               \
+      ImageArray *: ImageArray_next,                                                                                   \
+      PerlinArray *: PerlinArray_next)(array)
+
+struct World {
+  SphereArray spheres;
+  QuadArray quads;
+  Vec3Array colors;
+  MaterialArray materials;
+  CheckerArray checkers;
+  ImageArray images;
+  PerlinArray perlins;
 };
 
-void world_malloc(World *world);
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 
 struct Camera {
