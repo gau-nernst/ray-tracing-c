@@ -1,6 +1,6 @@
 #include "raytracing.h"
 #include "tiff.h"
-#include "utils.h"
+#include "my_utils.h"
 #include <time.h>
 
 void scene_book1(World *world, Camera *camera) {

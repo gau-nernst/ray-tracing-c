@@ -1,5 +1,5 @@
 #include "raytracing.h"
-#include "utils.h"
+#include "my_utils.h"
 #include <stdio.h>
 
 #define _USE_MATH_DEFINES // for MSVC
