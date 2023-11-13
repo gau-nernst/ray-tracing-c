@@ -144,15 +144,13 @@ void scene_cornell_box(World *world, Camera *camera) {
   list_init(&world->materials, 4);
 
   Material *red = Lambertian_new(texture(Vec3_new(0.65, 0.05, 0.05)));
-  list_append(&world->materials, red);
-
   Material *white = Lambertian_new(texture(Vec3_new(0.73, 0.73, 0.73)));
-  list_append(&world->materials, white);
-
   Material *green = Lambertian_new(texture(Vec3_new(0.12, 0.45, 0.15)));
-  list_append(&world->materials, green);
-
   Material *light = DiffuseLight_new(texture(Vec3_new(15, 15, 15)));
+
+  list_append(&world->materials, red);
+  list_append(&world->materials, white);
+  list_append(&world->materials, green);
   list_append(&world->materials, light);
 
   list_append(&world->quads, Quad_new((Vec3){555, 0, 0}, (Vec3){0, 555, 0}, (Vec3){0, 0, 555}, green));
