@@ -163,8 +163,15 @@ void scene_cornell_box(World *world, Camera *camera) {
   HittableList_append(&world->objects,
                       hittable(Quad_new((Vec3){0, 0, 555}, (Vec3){555, 0, 0}, (Vec3){0, 555, 0}, white)));
 
-  HittableList_append(&world->objects, hittable(Box_new((Vec3){130, 0, 65}, (Vec3){295, 165, 230}, white)));
-  HittableList_append(&world->objects, hittable(Box_new((Vec3){265, 0, 295}, (Vec3){430, 330, 460}, white)));
+  Hittable box1 = hittable(Box_new((Vec3){0, 0, 0}, (Vec3){165, 330, 165}, white));
+  box1 = hittable(RotateY_new(box1, 15));
+  box1 = hittable(Translate_new(box1, (Vec3){265, 0, 295}));
+  HittableList_append(&world->objects, box1);
+
+  Hittable box2 = hittable(Box_new((Vec3){0, 0, 0}, (Vec3){165, 165, 165}, white));
+  box2 = hittable(RotateY_new(box2, -18));
+  box2 = hittable(Translate_new(box2, (Vec3){130, 0, 65}));
+  HittableList_append(&world->objects, box2);
 
   camera->aspect_ratio = 1.0f;
   camera->background = (Vec3){0, 0, 0};

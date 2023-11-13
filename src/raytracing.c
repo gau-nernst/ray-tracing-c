@@ -47,6 +47,14 @@ HittableList *Box_new(Vec3 a, Vec3 b, Material mat) {
   return box;
 }
 
+Translate *Translate_new(Hittable object, Vec3 offset) define_struct_new(Translate, object, offset);
+
+void RotateY_init(RotateY *rotate_y, Hittable object, float angle) {
+  angle = angle * (float)M_PI / 180.f;
+  *rotate_y = (RotateY){object, sinf(angle), cosf(angle)};
+}
+RotateY *RotateY_new(Hittable object, float angle) define_init_new(RotateY, object, angle);
+
 // static bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
 //   for (int a = 0; a < 3; a++) {
 //     float invD = 1.0f / ray->direction.x[a];
@@ -85,6 +93,8 @@ HittableList *Box_new(Vec3 a, Vec3 b, Material mat) {
 
 static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 
 bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   switch (obj.type) {
@@ -94,6 +104,10 @@ bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRec
     return Sphere_hit(obj.ptr, ray, t_min, t_max, hit_record);
   case QUAD:
     return Quad_hit(obj.ptr, ray, t_min, t_max, hit_record);
+  case TRANSLATE:
+    return Translate_hit(obj.ptr, ray, t_min, t_max, hit_record);
+  case ROTATE_Y:
+    return RotateY_hit(obj.ptr, ray, t_min, t_max, hit_record);
   }
 }
 
@@ -133,7 +147,7 @@ static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float 
   Vec3 outward_normal = vec3_div(vec3_sub(hit_record->p, sphere->center), sphere->radius);
   hit_record->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
   hit_record->normal = hit_record->front_face ? outward_normal : vec3_neg(outward_normal);
-  hit_record->u = (atan2f(-outward_normal.x[2], outward_normal.x[0]) + M_PI) * M_1_PI * 0.5;
+  hit_record->u = (atan2f(-outward_normal.x[2], outward_normal.x[0]) + (float)M_PI) * (float)M_1_PI * 0.5;
   hit_record->v = acosf(-outward_normal.x[1]) * M_1_PI;
   hit_record->material = sphere->material;
 
@@ -168,6 +182,46 @@ static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max,
   return true;
 }
 
+static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+  Ray offset_r = {vec3_sub(ray->origin, translate->offset), ray->direction};
+
+  if (!Hittable_hit(translate->object, &offset_r, t_min, t_max, hit_record))
+    return false;
+
+  hit_record->p = vec3_add(hit_record->p, translate->offset);
+  return true;
+}
+
+static Vec3 Vec3_rotate_y(Vec3 u, float cos_theta, float sin_theta) {
+  return (Vec3){
+      cos_theta * u.x[0] - sin_theta * u.x[2],
+      u.x[1],
+      sin_theta * u.x[0] + cos_theta * u.x[2],
+  };
+}
+
+static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta) {
+  return (Vec3){
+      cos_theta * u.x[0] + sin_theta * u.x[2],
+      u.x[1],
+      -sin_theta * u.x[0] + cos_theta * u.x[2],
+  };
+}
+
+static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+  Ray rotated_r = {
+      Vec3_rotate_y(ray->origin, rotate_y->cos_theta, rotate_y->sin_theta),
+      Vec3_rotate_y(ray->direction, rotate_y->cos_theta, rotate_y->sin_theta),
+  };
+
+  if (!Hittable_hit(rotate_y->object, &rotated_r, t_min, t_max, hit_record))
+    return false;
+
+  hit_record->p = Vec3_rotate_y_inverse(hit_record->p, rotate_y->cos_theta, rotate_y->sin_theta);
+  hit_record->normal = Vec3_rotate_y_inverse(hit_record->normal, rotate_y->cos_theta, rotate_y->sin_theta);
+  return true;
+}
+
 void World_init(World *world, size_t max_objects, size_t max_materials) {
   HittableList_init(&world->objects, max_objects);
   MaterialList_init(&world->materials, max_materials);
@@ -176,7 +230,7 @@ void World_init(World *world, size_t max_objects, size_t max_materials) {
 void Camera_init(Camera *camera) {
   camera->img_height = (int)((float)camera->img_width / camera->aspect_ratio);
 
-  float viewport_height = 2.0 * tanf(camera->vfov * M_PI / 360.0f) * camera->focal_length;
+  float viewport_height = 2.0 * tanf(camera->vfov * (float)M_PI / 360.0f) * camera->focal_length;
   float viewport_width = viewport_height * (float)camera->img_width / (float)camera->img_height;
 
   camera->w = vec3_unit(vec3_sub(camera->look_from, camera->look_to));
@@ -194,7 +248,7 @@ void Camera_init(Camera *camera) {
   camera->pixel00_loc =
       vec3_add(viewport_upper_left, vec3_mul(camera->pixel_delta_u, 0.5f), vec3_mul(camera->pixel_delta_v, 0.5f));
 
-  float dof_radius = camera->focal_length * tanf(camera->dof_angle * M_PI / 360.0f);
+  float dof_radius = camera->focal_length * tanf(camera->dof_angle * (float)M_PI / 360.0f);
   camera->dof_disc_u = vec3_mul(camera->u, dof_radius);
   camera->dof_disc_v = vec3_mul(camera->v, dof_radius);
 }

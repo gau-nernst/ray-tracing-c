@@ -18,6 +18,8 @@ typedef enum HittableType {
   HITTABLE_LIST,
   SPHERE,
   QUAD,
+  TRANSLATE,
+  ROTATE_Y,
 } HittableType;
 
 typedef struct Hittable {
@@ -26,7 +28,15 @@ typedef struct Hittable {
 } Hittable;
 
 #define hittable(ptr)                                                                                                  \
-  (Hittable) { _Generic((ptr), HittableList *: HITTABLE_LIST, Sphere *: SPHERE, Quad *: QUAD), ptr }
+  (Hittable) {                                                                                                         \
+    _Generic((ptr),                                                                                                    \
+        HittableList *: HITTABLE_LIST,                                                                                 \
+        Sphere *: SPHERE,                                                                                              \
+        Quad *: QUAD,                                                                                                  \
+        Translate *: TRANSLATE,                                                                                        \
+        RotateY *: ROTATE_Y),                                                                                          \
+        ptr                                                                                                            \
+  }
 
 define_list_header(Hittable);
 
@@ -55,6 +65,22 @@ void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat);
 Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat);
 
 HittableList *Box_new(Vec3 a, Vec3 b, Material mat);
+
+typedef struct Translate {
+  Hittable object;
+  Vec3 offset;
+} Translate;
+
+Translate *Translate_new(Hittable object, Vec3 offset);
+
+typedef struct RotateY {
+  Hittable object;
+  float sin_theta;
+  float cos_theta;
+} RotateY;
+
+void RotateY_init(RotateY *rotate_y, Hittable object, float angle);
+RotateY *RotateY_new(Hittable object, float angle);
 
 // typedef struct AABB {
 //   float x[3][2];
