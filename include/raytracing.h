@@ -23,7 +23,7 @@ typedef struct Sphere {
   Material *material;
 } Sphere;
 
-Sphere *sphere_new(Vec3 center, float radius, Material *material);
+Sphere *Sphere_new(Vec3 center, float radius, Material *material);
 
 typedef struct Quad {
   Vec3 Q;
@@ -35,7 +35,8 @@ typedef struct Quad {
   Material *material;
 } Quad;
 
-void quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material);
+void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material);
+Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material *material);
 
 typedef struct AABB {
   float x[3][2];
@@ -45,10 +46,6 @@ struct World {
   List spheres;
   List quads;
   List materials;
-  List colors;
-  List checkers;
-  List images;
-  List perlins;
 };
 
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);

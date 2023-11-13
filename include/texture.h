@@ -12,6 +12,13 @@ typedef struct Texture {
   void *ptr;
 } Texture;
 
+#define texture(ptr)                                                                                                   \
+  _Generic((ptr),                                                                                                      \
+      Vec3 *: (Texture){SOLID, ptr},                                                                                   \
+      Checker *: (Texture){CHECKER, ptr},                                                                              \
+      Image *: (Texture){IMAGE, ptr},                                                                                  \
+      Perlin *: (Texture){PERLIN, ptr})
+
 Vec3 texture_value(Texture texture, float u, float v, Vec3 p);
 
 typedef struct Checker {
@@ -20,13 +27,16 @@ typedef struct Checker {
   Texture odd;
 } Checker;
 
+Checker *Checker_new(float scale, Texture even, Texture odd);
+
 typedef struct Image {
   int width;
   int height;
   uint8_t *buffer;
 } Image;
 
-void image_load(Image *image, char *filename);
+void Image_init(Image *image, char *filename);
+Image *Image_new(char *filename);
 
 #define N_PERLIN 256
 
@@ -39,4 +49,5 @@ typedef struct Perlin {
   int perm_z[N_PERLIN];
 } Perlin;
 
-void perlin_init(Perlin *perlin, PCG32State *rng);
+void Perlin_init(Perlin *perlin, float scale, int depth, PCG32State *rng);
+Perlin *Perlin_new(float scale, int depth, PCG32State *rng);

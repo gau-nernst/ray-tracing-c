@@ -1,7 +1,12 @@
 #include "texture.h"
+#include "utils.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
+
+Checker *Checker_new(float scale, Texture even, Texture odd) define_struct_new(Checker, scale, even, odd);
+Image *Image_new(char *filename) define_init_new(Image, filename);
+Perlin *Perlin_new(float scale, int depth, PCG32State *rng) define_init_new(Perlin, scale, depth, rng);
 
 static Vec3 solid_value(Vec3 *color);
 static Vec3 checker_value(Checker *checker, float u, float v, Vec3 p);
@@ -35,7 +40,7 @@ static Vec3 checker_value(Checker *checker, float u, float v, Vec3 p) {
   return texture_value((int_u + int_v) % 2 ? checker->odd : checker->even, u, v, p);
 }
 
-void image_load(Image *image, char *filename) {
+void Image_init(Image *image, char *filename) {
   image->buffer = stbi_load(filename, &image->width, &image->height, NULL, 3);
 }
 
@@ -63,7 +68,9 @@ static void perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
   }
 }
 
-void perlin_init(Perlin *perlin, PCG32State *rng) {
+void Perlin_init(Perlin *perlin, float scale, int depth, PCG32State *rng) {
+  perlin->scale = scale;
+  perlin->depth = depth;
   for (int i = 0; i < N_PERLIN; i++)
     perlin->grad_field[i] = vec3_rand_unit_vector(rng);
   perlin_permute(perlin->perm_x, rng);

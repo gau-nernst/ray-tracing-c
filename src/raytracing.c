@@ -7,7 +7,7 @@
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
-Sphere *sphere_new(Vec3 center, float radius, Material *material) {
+Sphere *Sphere_new(Vec3 center, float radius, Material *material) {
   Sphere *sphere = my_malloc(sizeof(Sphere));
   *sphere = (Sphere){center, radius, material};
   return sphere;
@@ -44,7 +44,7 @@ static bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float 
   return true;
 }
 
-void quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material) {
+void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material) {
   quad->Q = Q;
   quad->u = u;
   quad->v = v;
@@ -55,6 +55,7 @@ void quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material) {
   quad->D = vec3_dot(quad->normal, quad->Q);
   quad->w = vec3_div(n, vec3_length2(n));
 }
+Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material *material) define_init_new(Quad, Q, u, v, material);
 
 static bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   float denom = vec3_dot(quad->normal, ray->direction);

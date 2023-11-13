@@ -19,19 +19,11 @@ typedef struct Material {
   };
 } Material;
 
-Material *surface_normal_new();
-
-Material *lambertian_new(Texture albedo);
-Material *lambertian_color_new(Vec3 *color);
-
-Material *metal_new(Texture albedo, float fuzz);
-Material *metal_color_new(Vec3 *color, float fuzz);
-
-Material *dielectric_new(Texture albedo, float eta);
-Material *dielectric_color_new(Vec3 *color, float eta);
-
-Material *diffuse_light_new(Texture albedo);
-Material *diffuse_light_color_new(Vec3 *color);
+Material *SurfaceNormal_new();
+Material *Lambertian_new(Texture albedo);
+Material *Metal_new(Texture albedo, float fuzz);
+Material *Dielectric_new(Texture albedo, float eta);
+Material *DiffuseLight_new(Texture albedo);
 
 typedef struct HitRecord {
   Vec3 p;

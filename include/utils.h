@@ -12,10 +12,16 @@
 #endif
 #define clamp(x, lo, hi) min(max(x, lo), hi)
 
-#define new(Type, ...)                                                                                                 \
+#define define_struct_new(Type, ...)                                                                                   \
   {                                                                                                                    \
     Type *obj = my_malloc(sizeof(Type));                                                                               \
     *obj = (Type){__VA_ARGS__};                                                                                        \
+    return obj;                                                                                                        \
+  }
+#define define_init_new(Type, ...)                                                                                     \
+  {                                                                                                                    \
+    Type *obj = my_malloc(sizeof(Type));                                                                               \
+    Type##_init(obj, __VA_ARGS__);                                                                                     \
     return obj;                                                                                                        \
   }
 void *my_malloc(size_t size);

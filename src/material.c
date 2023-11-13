@@ -3,21 +3,13 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define material_new(type, ...) new (Material, type, __VA_ARGS__)
+#define material_new(type, ...) define_struct_new(Material, type, __VA_ARGS__)
 
-Material *surface_normal_new() material_new(SURFACE_NORMAL);
-
-Material *lambertian_new(Texture albedo) material_new(LAMBERTIAN, albedo);
-Material *lambertian_color_new(Vec3 *color) { return lambertian_new((Texture){SOLID, color}); }
-
-Material *metal_new(Texture albedo, float fuzz) material_new(METAL, albedo, .fuzz = fuzz);
-Material *metal_color_new(Vec3 *color, float fuzz) { return metal_new((Texture){SOLID, color}, fuzz); }
-
-Material *dielectric_new(Texture albedo, float eta) material_new(DIELECTRIC, albedo, .eta = eta);
-Material *dielectric_color_new(Vec3 *color, float eta) { return dielectric_new((Texture){SOLID, color}, eta); }
-
-Material *diffuse_light_new(Texture albedo) material_new(DIFFUSE_LIGHT, albedo);
-Material *diffuse_light_color_new(Vec3 *color) { return diffuse_light_new((Texture){SOLID, color}); };
+Material *SurfaceNormal_new() material_new(SURFACE_NORMAL);
+Material *Lambertian_new(Texture albedo) material_new(LAMBERTIAN, albedo);
+Material *Metal_new(Texture albedo, float fuzz) material_new(METAL, albedo, .fuzz = fuzz);
+Material *Dielectric_new(Texture albedo, float eta) material_new(DIELECTRIC, albedo, .eta = eta);
+Material *DiffuseLight_new(Texture albedo) material_new(DIFFUSE_LIGHT, albedo);
 
 static bool lambertian_scatter(HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   Vec3 new_direction = vec3_add(hit_record->normal, vec3_rand_unit_vector(rng));
