@@ -2,22 +2,20 @@
 #include "vec3.h"
 #include <stdint.h>
 
+typedef enum TextureType {
+  SOLID,
+  CHECKER,
+  IMAGE,
+  PERLIN,
+} TextureType;
+
 typedef struct Texture {
-  enum TextureType {
-    SOLID,
-    CHECKER,
-    IMAGE,
-    PERLIN,
-  } type;
+  TextureType type;
   void *ptr;
 } Texture;
 
 #define texture(ptr)                                                                                                   \
-  _Generic((ptr),                                                                                                      \
-      Vec3 *: (Texture){SOLID, ptr},                                                                                   \
-      Checker *: (Texture){CHECKER, ptr},                                                                              \
-      Image *: (Texture){IMAGE, ptr},                                                                                  \
-      Perlin *: (Texture){PERLIN, ptr})
+  (Texture) { _Generic((ptr), Vec3 *: SOLID, Checker *: CHECKER, Image *: IMAGE, Perlin *: PERLIN), ptr }
 
 Vec3 texture_value(Texture texture, float u, float v, Vec3 p);
 

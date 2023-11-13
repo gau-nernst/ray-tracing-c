@@ -30,6 +30,8 @@ Vec3 vec3float_sub(Vec3 u, float v);
 Vec3 vec3float_mul(Vec3 u, float v);
 Vec3 vec3float_div(Vec3 u, float v);
 Vec3 vec3_lerp(Vec3 a, Vec3 b, float w);
+Vec3 vec3_min(Vec3 u, Vec3 v);
+Vec3 vec3_max(Vec3 u, Vec3 v);
 
 float vec3_length2(Vec3 u);
 float vec3_length(Vec3 u);

@@ -2,33 +2,65 @@
 #define MATERIAL_H
 
 #include "texture.h"
+#include "utils.h"
 #include "vec3.h"
 
+typedef enum MaterialType {
+  SURFACE_NORMAL,
+  LAMBERTIAN,
+  METAL,
+  DIELECTRIC,
+  DIFFUSE_LIGHT,
+} MaterialType;
+
 typedef struct Material {
-  enum MaterialType {
-    SURFACE_NORMAL,
-    LAMBERTIAN,
-    METAL,
-    DIELECTRIC,
-    DIFFUSE_LIGHT,
-  } type;
-  Texture albedo;
-  union {
-    float fuzz; // for metal
-    float eta;  // for dielectric
-  };
+  MaterialType type;
+  void *ptr;
 } Material;
 
-Material *SurfaceNormal_new();
-Material *Lambertian_new(Texture albedo);
-Material *Metal_new(Texture albedo, float fuzz);
-Material *Dielectric_new(Texture albedo, float eta);
-Material *DiffuseLight_new(Texture albedo);
+define_list_header(Material);
+
+#define material(ptr)                                                                                                  \
+  (Material) {                                                                                                         \
+    _Generic((ptr),                                                                                                    \
+        SurfaceNormal *: SURFACE_NORMAL,                                                                               \
+        Lambertian *: LAMBERTIAN,                                                                                      \
+        Metal *: METAL,                                                                                                \
+        Dielectric *: DIELECTRIC,                                                                                      \
+        DiffuseLight *: DIFFUSE_LIGHT),                                                                                \
+        ptr                                                                                                            \
+  }
+
+typedef struct SurfaceNormal SurfaceNormal;
+
+typedef struct Lambertian {
+  Texture albedo;
+} Lambertian;
+
+typedef struct Metal {
+  Texture albedo;
+  float fuzz;
+} Metal;
+
+typedef struct Dielectric {
+  Texture albedo;
+  float eta;
+} Dielectric;
+
+typedef struct DiffuseLight {
+  Texture albedo;
+} DiffuseLight;
+
+SurfaceNormal *SurfaceNormal_new();
+Lambertian *Lambertian_new(Texture albedo);
+Metal *Metal_new(Texture albedo, float fuzz);
+Dielectric *Dielectric_new(Texture albedo, float eta);
+DiffuseLight *DiffuseLight_new(Texture albedo);
 
 typedef struct HitRecord {
   Vec3 p;
   Vec3 normal;
-  Material *material;
+  Material material;
   float t;
   float u;
   float v;
