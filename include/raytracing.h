@@ -7,9 +7,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-typedef struct World World;
-typedef struct Camera Camera;
-
 typedef struct Ray {
   Vec3 origin;
   Vec3 direction;
@@ -17,13 +14,32 @@ typedef struct Ray {
 
 Vec3 ray_at(const Ray *ray, float t);
 
+typedef enum HittableType {
+  HITTABLE_LIST,
+  SPHERE,
+  QUAD,
+} HittableType;
+
+typedef struct Hittable {
+  HittableType type;
+  void *ptr;
+} Hittable;
+
+#define hittable(ptr)                                                                                                  \
+  (Hittable) { _Generic((ptr), HittableList *: HITTABLE_LIST, Sphere *: SPHERE, Quad *: QUAD), ptr }
+
+define_list_header(Hittable);
+
+bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+
 typedef struct Sphere {
   Vec3 center;
   float radius;
-  Material *material;
+  Material material;
 } Sphere;
 
-Sphere *Sphere_new(Vec3 center, float radius, Material *material);
+Sphere *Sphere_new(Vec3 center, float radius, Material material);
 
 typedef struct Quad {
   Vec3 Q;
@@ -32,25 +48,26 @@ typedef struct Quad {
   Vec3 normal;
   float D;
   Vec3 w;
-  Material *material;
+  Material material;
 } Quad;
 
-void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material);
-Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material *material);
+void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat);
+Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat);
 
-typedef struct AABB {
-  float x[3][2];
-} AABB;
+HittableList *Box_new(Vec3 a, Vec3 b, Material mat);
 
-struct World {
-  List spheres;
-  List quads;
-  List materials;
-};
+// typedef struct AABB {
+//   float x[3][2];
+// } AABB;
 
-bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+typedef struct World {
+  HittableList objects;
+  MaterialList materials;
+} World;
 
-struct Camera {
+void World_init(World *world, size_t max_objects, size_t max_materials);
+
+typedef struct Camera {
   float aspect_ratio;
   int img_width;
   int img_height;
@@ -71,9 +88,9 @@ struct Camera {
   Vec3 w;
   Vec3 dof_disc_u;
   Vec3 dof_disc_v;
-};
+} Camera;
 
-void camera_init(Camera *camera);
-void camera_render(const Camera *camera, const World *world, uint8_t *buffer);
+void Camera_init(Camera *camera);
+void Camera_render(const Camera *camera, const World *world, uint8_t *buffer);
 
 #endif // RAYTRACING_H
