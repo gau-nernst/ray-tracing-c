@@ -19,10 +19,7 @@ typedef struct Vec3 {
   float x[3];
 } Vec3;
 
-Vec3 vec3(float x0, float x1, float x2);
-Vec3 vec3_full(float x);
-Vec3 vec3_zero();
-Vec3 vec3_one();
+Vec3 *vec3_new(float x0, float x1, float x2);
 Vec3 vec3_neg(Vec3 u);
 Vec3 vec3vec3_add(Vec3 u, Vec3 v);
 Vec3 vec3vec3_sub(Vec3 u, Vec3 v);

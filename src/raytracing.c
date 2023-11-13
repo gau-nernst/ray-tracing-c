@@ -1,5 +1,5 @@
 #include "raytracing.h"
-#include "my_utils.h"
+#include "utils.h"
 #include <stdio.h>
 
 #define _USE_MATH_DEFINES // for MSVC
@@ -7,7 +7,11 @@
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
-Sphere sphere(Vec3 center, float radius, Material *material) { return (Sphere){center, radius, material}; }
+Sphere *sphere_new(Vec3 center, float radius, Material *material) {
+  Sphere *sphere = my_malloc(sizeof(Sphere));
+  *sphere = (Sphere){center, radius, material};
+  return sphere;
+}
 
 static bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
@@ -116,25 +120,17 @@ AABB aabb_pad(const AABB *aabb) {
   return padded;
 }
 
-define_array_source(Vec3);
-define_array_source(Sphere);
-define_array_source(Quad);
-define_array_source(Material);
-define_array_source(Checker);
-define_array_source(Image);
-define_array_source(Perlin);
-
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   bool hit_anything = false;
 
   for (int i = 0; i < world->spheres.size; i++)
-    if (sphere_hit(world->spheres.items + i, ray, t_min, t_max, hit_record)) {
+    if (sphere_hit(world->spheres.items[i], ray, t_min, t_max, hit_record)) {
       t_max = hit_record->t;
       hit_anything = true;
     }
 
   for (int i = 0; i < world->quads.size; i++)
-    if (quad_hit(world->quads.items + i, ray, t_min, t_max, hit_record)) {
+    if (quad_hit(world->quads.items[i], ray, t_min, t_max, hit_record)) {
       t_max = hit_record->t;
       hit_anything = true;
     }
@@ -170,7 +166,7 @@ void camera_init(Camera *camera) {
 
 static Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (depth <= 0)
-    return vec3_zero();
+    return (Vec3){0, 0, 0};
 
   HitRecord hit_record;
   if (hit_objects(world, ray, 1e-3f, INFINITY, &hit_record)) {
@@ -209,7 +205,7 @@ void camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
 
       Vec3 pixel_pos = vec3_add(camera->pixel00_loc, vec3_mul(camera->pixel_delta_u, (float)i),
                                 vec3_mul(camera->pixel_delta_v, (float)j));
-      Vec3 pixel_color = vec3_zero();
+      Vec3 pixel_color = {0, 0, 0};
 
       for (int sample = 0; sample < camera->samples_per_pixel; sample++) {
         // square sampling

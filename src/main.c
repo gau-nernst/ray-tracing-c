@@ -1,110 +1,114 @@
 #include "raytracing.h"
 #include "tiff.h"
-#include "my_utils.h"
+#include "utils.h"
 #include <time.h>
 
 void scene_book1(World *world, Camera *camera) {
-  size_t n_max_spheres = 4 + 22 * 22;
-  world->spheres = SphereArray_new(n_max_spheres);
-  world->colors = Vec3Array_new(n_max_spheres);
-  world->materials = MaterialArray_new(n_max_spheres);
+  size_t max_spheres = 4 + 22 * 22;
+  list_init(&world->spheres, max_spheres);
+  list_init(&world->colors, max_spheres);
+  list_init(&world->materials, max_spheres);
 
-  Vec3 *color_p;
-  Material *material_p;
+  list_append(&world->colors, vec3_new(0.5, 0.5, 0.5));
+  list_append(&world->materials, lambertian_color_new(list_head(&world->colors)));
+  list_append(&world->spheres, sphere_new((Vec3){0, -1000, -1}, 1000, list_head(&world->materials)));
 
-  color_p = array_append(&world->colors, vec3_full(0.5));
-  material_p = array_append(&world->materials, lambertian(color_p));
-  array_append(&world->spheres, sphere(vec3(0, -1000, -1), 1000, material_p));
+  list_append(&world->colors, vec3_new(1, 1, 1));
+  list_append(&world->materials, dielectric_color_new(list_head(&world->colors), 1.5));
+  list_append(&world->spheres, sphere_new((Vec3){0, 1, 0}, 1, list_head(&world->materials)));
 
-  color_p = array_append(&world->colors, vec3_full(1));
-  material_p = array_append(&world->materials, dielectric(texture(SOLID, color_p), 1.5));
-  array_append(&world->spheres, sphere(vec3(0, 1, 0), 1, material_p));
+  list_append(&world->colors, vec3_new(0.4, 0.2, 0.1));
+  list_append(&world->materials, lambertian_color_new(list_head(&world->colors)));
+  list_append(&world->spheres, sphere_new((Vec3){-4, 1, 0}, 1, list_head(&world->materials)));
 
-  color_p = array_append(&world->colors, vec3(0.4, 0.2, 0.1));
-  material_p = array_append(&world->materials, lambertian(color_p));
-  array_append(&world->spheres, sphere(vec3(-4, 1, 0), 1, material_p));
-
-  color_p = array_append(&world->colors, vec3(0.7, 0.6, 0.5));
-  material_p = array_append(&world->materials, metal(texture(SOLID, color_p), 0));
-  array_append(&world->spheres, sphere(vec3(4, 1, 0), 1, material_p));
+  list_append(&world->colors, vec3_new(0.7, 0.6, 0.5));
+  list_append(&world->materials, metal_color_new(list_head(&world->colors), 0));
+  list_append(&world->spheres, sphere_new((Vec3){4, 1, 0}, 1, list_head(&world->materials)));
 
   PCG32State rng;
   pcg32_seed(&rng, 19, 29);
 
-  Vec3 ref_point = vec3(4, 0.2, 0);
+  Vec3 ref_point = {4, 0.2, 0};
   float radius = 0.2f;
 
   for (int a = -11; a < 11; a++)
     for (int b = -11; b < 11; b++) {
-      float choose_material = pcg32_f32(&rng);
-      Vec3 center = vec3((float)a + 0.9f * pcg32_f32(&rng), radius, (float)b + 0.9f * pcg32_f32(&rng));
+      Vec3 center = {
+          (float)a + 0.9f * pcg32_f32(&rng),
+          radius,
+          (float)b + 0.9f * pcg32_f32(&rng),
+      };
 
       if (vec3_length(vec3_sub(center, ref_point)) > 0.9f) {
-        color_p = array_next(&world->colors);
-        material_p = array_next(&world->materials);
+        float choose_material = pcg32_f32(&rng);
+
+        Vec3 *color_p = my_malloc(sizeof(Vec3));
+        Material *material_p;
 
         if (choose_material < 0.8f) {
           *color_p = vec3_mul(vec3_rand(&rng), vec3_rand(&rng));
-          *material_p = lambertian(color_p);
+          material_p = lambertian_color_new(color_p);
         } else if (choose_material < 0.95f) {
           *color_p = vec3_rand_between(&rng, 0.5f, 1);
-          *material_p = metal(color_p, pcg32_f32(&rng) * 0.5f);
+          material_p = metal_color_new(color_p, pcg32_f32(&rng) * 0.5f);
         } else {
-          *color_p = vec3_full(1);
-          *material_p = dielectric(color_p, 1.5f);
+          *color_p = (Vec3){1, 1, 1};
+          material_p = dielectric_color_new(color_p, 1.5f);
         }
 
-        array_append(&world->spheres, sphere(center, radius, material_p));
+        list_append(&world->colors, color_p);
+        list_append(&world->materials, material_p);
+        list_append(&world->spheres, sphere_new(center, radius, material_p));
       }
     }
 
   camera->vfov = 20.0f;
-  camera->background = vec3(0.7, 0.8, 1);
-  camera->look_from = vec3(13, 2, 3);
-  camera->look_to = vec3_zero();
+  camera->background = (Vec3){0.7, 0.8, 1};
+  camera->look_from = (Vec3){13, 2, 3};
+  camera->look_to = (Vec3){0, 0, 0};
   camera->dof_angle = 0.6f;
 }
 
-void scene_checker(World *world, Camera *camera) {
-  world->spheres = SphereArray_new(2);
-  world->colors = Vec3Array_new(2);
-  world->checkers = CheckerArray_new(1);
-  world->materials = MaterialArray_new(1);
+// void scene_checker(World *world, Camera *camera) {
+//   world->spheres = SphereArray_new(2);
+//   world->colors = Vec3Array_new(2);
+//   world->checkers = CheckerArray_new(1);
+//   world->materials = MaterialArray_new(1);
 
-  Vec3 *color1 = array_append(&world->colors, vec3(0.2, 0.3, 0.1));
-  Vec3 *color2 = array_append(&world->colors, vec3_full(0.9));
+//   Vec3 *color1 = array_append(&world->colors, vec3(0.2, 0.3, 0.1));
+//   Vec3 *color2 = array_append(&world->colors, vec3_full(0.9));
 
-  Checker *checker_p = array_next(&world->checkers);
-  checker_p->scale = 0.01f;
-  checker_p->even = texture(SOLID, color1);
-  checker_p->odd = texture(SOLID, color2);
+//   Checker *checker_p = array_next(&world->checkers);
+//   checker_p->scale = 0.01f;
+//   checker_p->even = texture(SOLID, color1);
+//   checker_p->odd = texture(SOLID, color2);
 
-  Material *material_p = array_append(&world->materials, lambertian(texture(CHECKER, checker_p)));
-  array_append(&world->spheres, sphere(vec3(0, -10, 0), 10, material_p));
-  array_append(&world->spheres, sphere(vec3(0, 10, 0), 10, material_p));
+//   Material *material_p = array_append(&world->materials, lambertian(texture(CHECKER, checker_p)));
+//   array_append(&world->spheres, sphere(vec3(0, -10, 0), 10, material_p));
+//   array_append(&world->spheres, sphere(vec3(0, 10, 0), 10, material_p));
 
-  camera->vfov = 20.0f;
-  camera->background = vec3(0.7, 0.8, 1);
-  camera->look_from = vec3(13, 2, 3);
-  camera->look_to = vec3_zero();
-}
+//   camera->vfov = 20.0f;
+//   camera->background = vec3(0.7, 0.8, 1);
+//   camera->look_from = vec3(13, 2, 3);
+//   camera->look_to = vec3_zero();
+// }
 
-void scene_earth(World *world, Camera *camera) {
-  world->spheres = SphereArray_new(1);
-  world->materials = MaterialArray_new(1);
-  world->images = ImageArray_new(1);
+// void scene_earth(World *world, Camera *camera) {
+//   world->spheres = SphereArray_new(1);
+//   world->materials = MaterialArray_new(1);
+//   world->images = ImageArray_new(1);
 
-  Image *image = array_next(&world->images);
-  image_load(image, "earthmap.jpg");
+//   Image *image = array_next(&world->images);
+//   image_load(image, "earthmap.jpg");
 
-  Material *material_p = array_append(&world->materials, lambertian(texture(IMAGE, image)));
-  array_append(&world->spheres, sphere(vec3_zero(), 2, material_p));
+//   Material *material_p = array_append(&world->materials, lambertian(texture(IMAGE, image)));
+//   array_append(&world->spheres, sphere(vec3_zero(), 2, material_p));
 
-  camera->vfov = 20.0f;
-  camera->background = vec3(0.7, 0.8, 1);
-  camera->look_from = vec3(13, 2, 3);
-  camera->look_to = vec3_zero();
-}
+//   camera->vfov = 20.0f;
+//   camera->background = vec3(0.7, 0.8, 1);
+//   camera->look_from = vec3(13, 2, 3);
+//   camera->look_to = vec3_zero();
+// }
 
 // void scene_perlin(World *world, Camera *camera) {
 //   *world = (World){
@@ -237,7 +241,7 @@ int main(int argc, char *argv[]) {
   camera.img_width = 400;
   camera.samples_per_pixel = 100;
   camera.max_depth = 50;
-  camera.vup = vec3(0, 1, 0);
+  camera.vup = (Vec3){0, 1, 0};
   camera.dof_angle = 0.0f;
   camera.focal_length = 10.0f;
 
@@ -251,12 +255,12 @@ int main(int argc, char *argv[]) {
   case 0:
     scene_book1(&world, &camera);
     break;
-  case 1:
-    scene_checker(&world, &camera);
-    break;
-  case 2:
-    scene_earth(&world, &camera);
-    break;
+    // case 1:
+    //   scene_checker(&world, &camera);
+    //   break;
+    // case 2:
+    //   scene_earth(&world, &camera);
+    //   break;
     // case 3:
     //   scene_perlin(&world, &camera);
     //   break;

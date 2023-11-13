@@ -1,8 +1,8 @@
 #ifndef RAYTRACING_H
 #define RAYTRACING_H
 
-#include "array.h"
 #include "material.h"
+#include "utils.h"
 #include "vec3.h"
 #include <stdbool.h>
 #include <stdlib.h>
@@ -23,7 +23,7 @@ typedef struct Sphere {
   Material *material;
 } Sphere;
 
-Sphere sphere(Vec3 center, float radius, Material *material);
+Sphere *sphere_new(Vec3 center, float radius, Material *material);
 
 typedef struct Quad {
   Vec3 Q;
@@ -41,40 +41,14 @@ typedef struct AABB {
   float x[3][2];
 } AABB;
 
-define_array_header(Vec3);
-define_array_header(Sphere);
-define_array_header(Quad);
-define_array_header(Material);
-define_array_header(Checker);
-define_array_header(Image);
-define_array_header(Perlin);
-
-#define array_append(array, obj)                                                                                       \
-  _Generic((array),                                                                                                    \
-      Vec3Array *: Vec3Array_append,                                                                                   \
-      SphereArray *: SphereArray_append,                                                                               \
-      MaterialArray *: MaterialArray_append,                                                                           \
-      CheckerArray *: CheckerArray_append,                                                                             \
-      ImageArray *: ImageArray_append,                                                                                 \
-      PerlinArray *: PerlinArray_append)(array, obj)
-
-#define array_next(array)                                                                                              \
-  _Generic((array),                                                                                                    \
-      Vec3Array *: Vec3Array_next,                                                                                     \
-      SphereArray *: SphereArray_next,                                                                                 \
-      MaterialArray *: MaterialArray_next,                                                                             \
-      CheckerArray *: CheckerArray_next,                                                                               \
-      ImageArray *: ImageArray_next,                                                                                   \
-      PerlinArray *: PerlinArray_next)(array)
-
 struct World {
-  SphereArray spheres;
-  QuadArray quads;
-  Vec3Array colors;
-  MaterialArray materials;
-  CheckerArray checkers;
-  ImageArray images;
-  PerlinArray perlins;
+  List spheres;
+  List quads;
+  List materials;
+  List colors;
+  List checkers;
+  List images;
+  List perlins;
 };
 
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
