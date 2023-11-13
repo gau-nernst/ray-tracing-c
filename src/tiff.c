@@ -7,7 +7,7 @@ typedef struct TiffField {
   uint32_t value;
 } TiffField;
 
-void write_tiff_field(FILE *f, uint16_t tag, uint16_t dtype, uint32_t count, uint32_t value) {
+static void write_tiff_field(FILE *f, uint16_t tag, uint16_t dtype, uint32_t count, uint32_t value) {
   TiffField field = {tag, dtype, count, value};
   fwrite(&field, sizeof(TiffField), 1, f); // assume system is little-endian
 }

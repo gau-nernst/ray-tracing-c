@@ -1,11 +1,19 @@
 #include "raytracing.h"
+#include "utils.h"
+#include <stdio.h>
+
 #define _USE_MATH_DEFINES // for MSVC
 #include <math.h>
-#include <stdio.h>
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
-bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+Sphere *Sphere_new(Vec3 center, float radius, Material *material) {
+  Sphere *sphere = my_malloc(sizeof(Sphere));
+  *sphere = (Sphere){center, radius, material};
+  return sphere;
+}
+
+static bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
   float a = vec3_length2(ray->direction);
   float b = vec3_dot(oc, ray->direction);
@@ -36,14 +44,20 @@ bool sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, 
   return true;
 }
 
-void quad_init(Quad *quad) {
+void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material *material) {
+  quad->Q = Q;
+  quad->u = u;
+  quad->v = v;
+  quad->material = material;
+
   Vec3 n = vec3_cross(quad->u, quad->v);
   quad->normal = vec3_unit(n);
   quad->D = vec3_dot(quad->normal, quad->Q);
   quad->w = vec3_div(n, vec3_length2(n));
 }
+Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material *material) define_init_new(Quad, Q, u, v, material);
 
-bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+static bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   float denom = vec3_dot(quad->normal, ray->direction);
   if (fabs(denom) < 1e-8f)
     return false;
@@ -71,7 +85,7 @@ bool quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRec
   return true;
 }
 
-bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
+static bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
   for (int a = 0; a < 3; a++) {
     float invD = 1.0f / ray->direction.x[a];
     float t0 = (min(aabb->x[a][0], aabb->x[a][1]) - ray->origin.x[a]) * invD;
@@ -107,27 +121,17 @@ AABB aabb_pad(const AABB *aabb) {
   return padded;
 }
 
-void world_init(World *world) {
-  try_malloc(world->spheres, sizeof(Sphere) * world->n_spheres);
-  try_malloc(world->quads, sizeof(Quad) * world->n_quads);
-  try_malloc(world->materials, sizeof(Material) * world->n_materials);
-  try_malloc(world->colors, sizeof(Vec3) * world->n_colors);
-  try_malloc(world->checkers, sizeof(Checker) * world->n_checkers);
-  try_malloc(world->images, sizeof(Image) * world->n_images);
-  try_malloc(world->perlins, sizeof(Perlin) * world->n_perlins);
-}
-
 bool hit_objects(const World *world, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
   bool hit_anything = false;
 
-  for (int i = 0; i < world->n_spheres; i++)
-    if (sphere_hit(world->spheres + i, ray, t_min, t_max, hit_record)) {
+  for (int i = 0; i < world->spheres.size; i++)
+    if (sphere_hit(world->spheres.items[i], ray, t_min, t_max, hit_record)) {
       t_max = hit_record->t;
       hit_anything = true;
     }
 
-  for (int i = 0; i < world->n_quads; i++)
-    if (quad_hit(world->quads + i, ray, t_min, t_max, hit_record)) {
+  for (int i = 0; i < world->quads.size; i++)
+    if (quad_hit(world->quads.items[i], ray, t_min, t_max, hit_record)) {
       t_max = hit_record->t;
       hit_anything = true;
     }
@@ -161,9 +165,9 @@ void camera_init(Camera *camera) {
   camera->dof_disc_v = vec3_mul(camera->v, dof_radius);
 }
 
-Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
+static Vec3 camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (depth <= 0)
-    return (Vec3){0.0f, 0.0f, 0.0f};
+    return (Vec3){0, 0, 0};
 
   HitRecord hit_record;
   if (hit_objects(world, ray, 1e-3f, INFINITY, &hit_record)) {
@@ -202,7 +206,7 @@ void camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
 
       Vec3 pixel_pos = vec3_add(camera->pixel00_loc, vec3_mul(camera->pixel_delta_u, (float)i),
                                 vec3_mul(camera->pixel_delta_v, (float)j));
-      Vec3 pixel_color = {0.0f, 0.0f, 0.0f};
+      Vec3 pixel_color = {0, 0, 0};
 
       for (int sample = 0; sample < camera->samples_per_pixel; sample++) {
         // square sampling

@@ -1,6 +1,8 @@
 #include "vec3.h"
+#include "utils.h"
 #include <math.h>
 
+Vec3 *Vec3_new(float x0, float x1, float x2) define_struct_new(Vec3, x0, x1, x2);
 Vec3 vec3_neg(Vec3 u) { return (Vec3){-u.x[0], -u.x[1], -u.x[2]}; }
 Vec3 vec3vec3_add(Vec3 u, Vec3 v) { return (Vec3){u.x[0] + v.x[0], u.x[1] + v.x[1], u.x[2] + v.x[2]}; }
 Vec3 vec3vec3_sub(Vec3 u, Vec3 v) { return (Vec3){u.x[0] - v.x[0], u.x[1] - v.x[1], u.x[2] - v.x[2]}; }
