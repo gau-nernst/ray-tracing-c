@@ -33,6 +33,7 @@ void scene_book1(World *world, Camera *camera) {
 
   for (int a = -11; a < 11; a++)
     for (int b = -11; b < 11; b++) {
+      float choose_material = pcg32_f32(&rng);
       Vec3 center = {
           (float)a + 0.9f * pcg32_f32(&rng),
           radius,
@@ -40,8 +41,6 @@ void scene_book1(World *world, Camera *camera) {
       };
 
       if (vec3_length(vec3_sub(center, ref_point)) > 0.9f) {
-        float choose_material = pcg32_f32(&rng);
-
         Vec3 *color_p = my_malloc(sizeof(Vec3));
         Material *material_p;
 
