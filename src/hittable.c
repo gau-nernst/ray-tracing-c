@@ -53,6 +53,16 @@ void RotateY_init(RotateY *rotate_y, Hittable object, float angle) {
 }
 RotateY *RotateY_new(Hittable object, float angle) define_init_new(RotateY, object, angle);
 
+void ConstantMedium_init(ConstantMedium *constant_medium, Hittable boundary, float density, Texture albedo) {
+  *constant_medium = (ConstantMedium){
+      boundary,
+      -1.0f / density,
+      material(Isotropic_new(albedo)),
+  };
+}
+ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture albedo)
+    define_init_new(ConstantMedium, boundary, density, albedo);
+
 // static bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
 //   for (int a = 0; a < 3; a++) {
 //     float invD = 1.0f / ray->direction.x[a];
@@ -91,29 +101,36 @@ RotateY *RotateY_new(Hittable object, float angle) define_init_new(RotateY, obje
 
 static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
-static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
-static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+                          PCG32State *rng);
+static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+                        PCG32State *rng);
+static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray *ray, float t_min, float t_max,
+                               HitRecord *hit_record, PCG32State *rng);
 
-bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record, PCG32State *rng) {
   switch (obj.type) {
   case HITTABLE_LIST:
-    return HittableList_hit(obj.ptr, ray, t_min, t_max, hit_record);
+    return HittableList_hit(obj.ptr, ray, t_min, t_max, hit_record, rng);
   case SPHERE:
     return Sphere_hit(obj.ptr, ray, t_min, t_max, hit_record);
   case QUAD:
     return Quad_hit(obj.ptr, ray, t_min, t_max, hit_record);
   case TRANSLATE:
-    return Translate_hit(obj.ptr, ray, t_min, t_max, hit_record);
+    return Translate_hit(obj.ptr, ray, t_min, t_max, hit_record, rng);
   case ROTATE_Y:
-    return RotateY_hit(obj.ptr, ray, t_min, t_max, hit_record);
+    return RotateY_hit(obj.ptr, ray, t_min, t_max, hit_record, rng);
+  case CONSTANT_MEDIUM:
+    return ConstantMedium_hit(obj.ptr, ray, t_min, t_max, hit_record, rng);
   }
 }
 
-bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+                      PCG32State *rng) {
   bool hit_anything = false;
 
   for (int i = 0; i < list->size; i++)
-    if (Hittable_hit(list->items[i], ray, t_min, t_max, hit_record)) {
+    if (Hittable_hit(list->items[i], ray, t_min, t_max, hit_record, rng)) {
       t_max = hit_record->t;
       hit_anything = true;
     }
@@ -180,10 +197,11 @@ static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max,
   return true;
 }
 
-static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+                          PCG32State *rng) {
   Ray offset_r = {vec3_sub(ray->origin, translate->offset), ray->direction};
 
-  if (!Hittable_hit(translate->object, &offset_r, t_min, t_max, hit_record))
+  if (!Hittable_hit(translate->object, &offset_r, t_min, t_max, hit_record, rng))
     return false;
 
   hit_record->p = vec3_add(hit_record->p, translate->offset);
@@ -206,16 +224,49 @@ static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta) {
   };
 }
 
-static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+                        PCG32State *rng) {
   Ray rotated_r = {
       Vec3_rotate_y(ray->origin, rotate_y->cos_theta, rotate_y->sin_theta),
       Vec3_rotate_y(ray->direction, rotate_y->cos_theta, rotate_y->sin_theta),
   };
 
-  if (!Hittable_hit(rotate_y->object, &rotated_r, t_min, t_max, hit_record))
+  if (!Hittable_hit(rotate_y->object, &rotated_r, t_min, t_max, hit_record, rng))
     return false;
 
   hit_record->p = Vec3_rotate_y_inverse(hit_record->p, rotate_y->cos_theta, rotate_y->sin_theta);
   hit_record->normal = Vec3_rotate_y_inverse(hit_record->normal, rotate_y->cos_theta, rotate_y->sin_theta);
+  return true;
+}
+
+static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray *ray, float t_min, float t_max,
+                               HitRecord *hit_record, PCG32State *rng) {
+  HitRecord rec1, rec2;
+
+  if (!Hittable_hit(constant_medium->boundary, ray, -INFINITY, INFINITY, &rec1, rng))
+    return false;
+
+  if (!Hittable_hit(constant_medium->boundary, ray, rec1.t + 0.0001f, INFINITY, &rec2, rng))
+    return false;
+
+  rec1.t = max(rec1.t, t_min);
+  rec2.t = min(rec2.t, t_max);
+
+  if (rec1.t >= rec2.t)
+    return false;
+
+  rec1.t = max(rec1.t, 0.0f);
+
+  float ray_length = vec3_length(ray->direction);
+  float distance_inside_boundary = (rec2.t - rec1.t) * ray_length;
+  float hit_distance = constant_medium->neg_inv_density * logf(pcg32_f32(rng));
+
+  if (hit_distance > distance_inside_boundary)
+    return false;
+
+  // NOTE: we don't need to set normal and front_face, since Isotropic doesn't use them
+  hit_record->t = rec1.t + hit_distance / ray_length;
+  hit_record->p = ray_at(ray, hit_record->t);
+  hit_record->material = constant_medium->phase_fn;
   return true;
 }

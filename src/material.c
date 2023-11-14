@@ -11,12 +11,15 @@ Lambertian *Lambertian_new(Texture albedo) define_struct_new(Lambertian, albedo)
 Metal *Metal_new(Texture albedo, float fuzz) define_struct_new(Metal, albedo, fuzz);
 Dielectric *Dielectric_new(Texture albedo, float eta) define_struct_new(Dielectric, albedo, eta);
 DiffuseLight *DiffuseLight_new(Texture albedo) define_struct_new(DiffuseLight, albedo);
+Isotropic *Isotropic_new(Texture albedo) define_struct_new(Isotropic, albedo);
 
 static bool lambertian_scatter(Lambertian *mat, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color);
 static bool metal_scatter(Metal *mat, Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered,
                           Vec3 *color);
 static bool dielectric_scatter(Dielectric *mat, Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered,
                                Vec3 *color);
+static bool isotropic_scatter(Isotropic *mat, Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered,
+                              Vec3 *color);
 
 bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   Material mat = hit_record->material;
@@ -30,6 +33,8 @@ bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scatte
     return metal_scatter(mat.ptr, incident, hit_record, rng, scattered, color);
   case DIELECTRIC:
     return dielectric_scatter(mat.ptr, incident, hit_record, rng, scattered, color);
+  case ISOTROPIC:
+    return isotropic_scatter(mat.ptr, incident, hit_record, rng, scattered, color);
   default:
     *color = (Vec3){0, 0, 0};
     return false;
@@ -61,7 +66,7 @@ static bool dielectric_scatter(Dielectric *mat, Vec3 incident, HitRecord *hit_re
   float eta = hit_record->front_face ? 1.0f / mat->eta : mat->eta;
   incident = vec3_unit(incident);
 
-  float cos_theta = fminf(-vec3_dot(incident, hit_record->normal), 1.0f);
+  float cos_theta = min(-vec3_dot(incident, hit_record->normal), 1.0f);
   float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
 
   float schlick_r = (1.0f - eta) / (1.0f + eta);
@@ -76,6 +81,13 @@ static bool dielectric_scatter(Dielectric *mat, Vec3 incident, HitRecord *hit_re
     Vec3 r_para = vec3_mul(hit_record->normal, -sqrtf(fabsf(1.0f - vec3_length2(r_perp))));
     *scattered = vec3_add(r_perp, r_para);
   }
+  *color = texture_value(mat->albedo, hit_record->u, hit_record->v, hit_record->p);
+  return true;
+}
+
+static bool isotropic_scatter(Isotropic *mat, Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered,
+                              Vec3 *color) {
+  *scattered = vec3_rand_unit_vector(rng);
   *color = texture_value(mat->albedo, hit_record->u, hit_record->v, hit_record->p);
   return true;
 }

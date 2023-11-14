@@ -13,8 +13,8 @@ Vec3 vec3float_sub(Vec3 u, float v) { return (Vec3){u.x[0] - v, u.x[1] - v, u.x[
 Vec3 vec3float_mul(Vec3 u, float v) { return (Vec3){u.x[0] * v, u.x[1] * v, u.x[2] * v}; }
 Vec3 vec3float_div(Vec3 u, float v) { return vec3_mul(u, 1.0f / v); }
 Vec3 vec3_lerp(Vec3 a, Vec3 b, float w) { return vec3_add(vec3_mul(a, 1.0f - w), vec3_mul(b, w)); }
-Vec3 vec3_min(Vec3 u, Vec3 v) { return (Vec3){fminf(u.x[0], v.x[0]), fminf(u.x[1], v.x[1]), fminf(u.x[2], v.x[2])}; }
-Vec3 vec3_max(Vec3 u, Vec3 v) { return (Vec3){fmaxf(u.x[0], v.x[0]), fmaxf(u.x[1], v.x[1]), fmaxf(u.x[2], v.x[2])}; }
+Vec3 vec3_min(Vec3 u, Vec3 v) { return (Vec3){min(u.x[0], v.x[0]), min(u.x[1], v.x[1]), min(u.x[2], v.x[2])}; }
+Vec3 vec3_max(Vec3 u, Vec3 v) { return (Vec3){max(u.x[0], v.x[0]), max(u.x[1], v.x[1]), max(u.x[2], v.x[2])}; }
 
 float vec3_length2(Vec3 u) { return vec3_dot(u, u); }
 float vec3_length(Vec3 u) { return sqrtf(vec3_length2(u)); }

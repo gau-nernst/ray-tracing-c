@@ -18,6 +18,7 @@ typedef enum HittableType {
   QUAD,
   TRANSLATE,
   ROTATE_Y,
+  CONSTANT_MEDIUM,
 } HittableType;
 
 typedef struct Hittable {
@@ -32,14 +33,16 @@ typedef struct Hittable {
         Sphere *: SPHERE,                                                                                              \
         Quad *: QUAD,                                                                                                  \
         Translate *: TRANSLATE,                                                                                        \
-        RotateY *: ROTATE_Y),                                                                                          \
+        RotateY *: ROTATE_Y,                                                                                           \
+        ConstantMedium *: CONSTANT_MEDIUM),                                                                            \
         ptr                                                                                                            \
   }
 
 define_list_header(Hittable);
 
-bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
-bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record, PCG32State *rng);
+bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+                      PCG32State *rng);
 
 typedef struct Sphere {
   Vec3 center;
@@ -79,6 +82,15 @@ typedef struct RotateY {
 
 void RotateY_init(RotateY *rotate_y, Hittable object, float angle);
 RotateY *RotateY_new(Hittable object, float angle);
+
+typedef struct ConstantMedium {
+  Hittable boundary;
+  float neg_inv_density;
+  Material phase_fn;
+} ConstantMedium;
+
+void ConstantMedium_init(ConstantMedium *constant_medium, Hittable boundary, float density, Texture albedo);
+ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture albedo);
 
 // typedef struct AABB {
 //   float x[3][2];
