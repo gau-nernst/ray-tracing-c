@@ -4,6 +4,7 @@
 #include "texture.h"
 #include "utils.h"
 #include "vec3.h"
+#include <stdbool.h>
 
 typedef enum MaterialType {
   SURFACE_NORMAL,
