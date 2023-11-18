@@ -1,8 +1,6 @@
 #include "raytracing.h"
-#include <stdio.h>
-
-#define _USE_MATH_DEFINES // for MSVC
 #include <math.h>
+#include <stdio.h>
 
 void World_init(World *world, size_t max_objects, size_t max_materials) {
   HittableList_init(&world->objects, max_objects);

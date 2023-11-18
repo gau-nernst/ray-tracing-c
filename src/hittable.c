@@ -1,6 +1,4 @@
 #include "hittable.h"
-
-#define _USE_MATH_DEFINES // for MSVC
 #include <math.h>
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }

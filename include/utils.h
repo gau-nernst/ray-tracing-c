@@ -5,13 +5,8 @@
 #include <stdlib.h>
 
 // gcc with -std=c11 doesn't define M_PI
-#ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288
-#endif
-
-#ifndef M_1_PI
 #define M_1_PI 0.318309886183790671537767526745028724
-#endif
 
 #ifndef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
