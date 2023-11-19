@@ -10,11 +10,11 @@ AABB AABB_from_Vec3(Vec3 a, Vec3 b) {
       {fminf(a.x[2], b.x[2]), fmaxf(a.x[2], b.x[2])},
   }};
 }
-AABB AABB_from_AABB(AABB a, AABB b) {
+AABB AABB_from_AABB(AABB *a, AABB *b) {
   return (AABB){{
-      {fminf(a.x[0][0], b.x[0][0]), fmaxf(a.x[0][1], b.x[0][1])},
-      {fminf(a.x[1][0], b.x[1][0]), fmaxf(a.x[1][1], b.x[1][1])},
-      {fminf(a.x[2][0], b.x[2][0]), fmaxf(a.x[2][1], b.x[2][1])},
+      {fminf(a->x[0][0], b->x[0][0]), fmaxf(a->x[0][1], b->x[0][1])},
+      {fminf(a->x[1][0], b->x[1][0]), fmaxf(a->x[1][1], b->x[1][1])},
+      {fminf(a->x[2][0], b->x[2][0]), fmaxf(a->x[2][1], b->x[2][1])},
   }};
 }
 
@@ -43,7 +43,9 @@ HittableList *HittableList_new(size_t max_size) define_init_new(HittableList, ma
 void HittableList_append(HittableList *list, Hittable item) {
   assert((list->size < list->max_size) && "List is full");
   list->items[list->size++] = item;
-  list->bbox = AABB_from_AABB(list->bbox, Hittable_bbox(item));
+
+  AABB item_bbox = Hittable_bbox(item);
+  list->bbox = AABB_from_AABB(&list->bbox, &item_bbox);
 }
 
 void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat) {
@@ -141,46 +143,49 @@ AABB AABB_pad(const AABB *aabb) {
   return padded;
 }
 
-static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
-static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
-static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *rec);
+static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *rec);
+static bool BVHNode_hit(const BVHNode *bvh, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng);
+static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                           PCG32State *rng);
-static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                         PCG32State *rng);
 static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray *ray, float t_min, float t_max,
-                               HitRecord *hit_record, PCG32State *rng);
+                               HitRecord *rec, PCG32State *rng);
 
-bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record, PCG32State *rng) {
+bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng) {
   switch (obj.type) {
   case HITTABLE_LIST:
-    return HittableList_hit(obj.ptr, ray, t_min, t_max, hit_record, rng);
+    return HittableList_hit(obj.ptr, ray, t_min, t_max, rec, rng);
   case SPHERE:
-    return Sphere_hit(obj.ptr, ray, t_min, t_max, hit_record);
+    return Sphere_hit(obj.ptr, ray, t_min, t_max, rec);
   case QUAD:
-    return Quad_hit(obj.ptr, ray, t_min, t_max, hit_record);
+    return Quad_hit(obj.ptr, ray, t_min, t_max, rec);
+  case BVH_NODE:
+    return BVHNode_hit(obj.ptr, ray, t_min, t_max, rec, rng);
   case TRANSLATE:
-    return Translate_hit(obj.ptr, ray, t_min, t_max, hit_record, rng);
+    return Translate_hit(obj.ptr, ray, t_min, t_max, rec, rng);
   case ROTATE_Y:
-    return RotateY_hit(obj.ptr, ray, t_min, t_max, hit_record, rng);
+    return RotateY_hit(obj.ptr, ray, t_min, t_max, rec, rng);
   case CONSTANT_MEDIUM:
-    return ConstantMedium_hit(obj.ptr, ray, t_min, t_max, hit_record, rng);
+    return ConstantMedium_hit(obj.ptr, ray, t_min, t_max, rec, rng);
   }
 }
 
-bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                       PCG32State *rng) {
   bool hit_anything = false;
 
   for (int i = 0; i < list->size; i++)
-    if (Hittable_hit(list->items[i], ray, t_min, t_max, hit_record, rng)) {
-      t_max = hit_record->t;
+    if (Hittable_hit(list->items[i], ray, t_min, t_max, rec, rng)) {
+      t_max = rec->t;
       hit_anything = true;
     }
 
   return hit_anything;
 }
 
-static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *rec) {
   Vec3 oc = vec3_sub(ray->origin, sphere->center);
   float a = vec3_length2(ray->direction);
   float b = vec3_dot(oc, ray->direction);
@@ -198,20 +203,20 @@ static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float 
       return false;
   }
 
-  hit_record->t = root;
-  hit_record->p = ray_at(ray, root);
+  rec->t = root;
+  rec->p = ray_at(ray, root);
 
-  Vec3 outward_normal = vec3_div(vec3_sub(hit_record->p, sphere->center), sphere->radius);
-  hit_record->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
-  hit_record->normal = hit_record->front_face ? outward_normal : vec3_neg(outward_normal);
-  hit_record->u = (atan2f(-outward_normal.x[2], outward_normal.x[0]) + (float)M_PI) * (float)M_1_PI * 0.5;
-  hit_record->v = acosf(-outward_normal.x[1]) * M_1_PI;
-  hit_record->material = sphere->material;
+  Vec3 outward_normal = vec3_div(vec3_sub(rec->p, sphere->center), sphere->radius);
+  rec->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
+  rec->normal = rec->front_face ? outward_normal : vec3_neg(outward_normal);
+  rec->u = (atan2f(-outward_normal.x[2], outward_normal.x[0]) + (float)M_PI) * (float)M_1_PI * 0.5;
+  rec->v = acosf(-outward_normal.x[1]) * M_1_PI;
+  rec->material = sphere->material;
 
   return true;
 }
 
-static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record) {
+static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *rec) {
   float denom = vec3_dot(quad->normal, ray->direction);
   if (fabs(denom) < 1e-8f)
     return false;
@@ -228,15 +233,27 @@ static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max,
   if ((alpha < 0) || (alpha > 1) || (beta < 0) || (beta > 1))
     return false;
 
-  hit_record->u = alpha;
-  hit_record->v = beta;
-  hit_record->t = t;
-  hit_record->p = p;
-  hit_record->material = quad->material;
-  hit_record->front_face = vec3_dot(ray->direction, quad->normal) < 0.0f;
-  hit_record->normal = hit_record->front_face ? quad->normal : vec3_neg(quad->normal);
+  rec->u = alpha;
+  rec->v = beta;
+  rec->t = t;
+  rec->p = p;
+  rec->material = quad->material;
+  rec->front_face = vec3_dot(ray->direction, quad->normal) < 0.0f;
+  rec->normal = rec->front_face ? quad->normal : vec3_neg(quad->normal);
 
   return true;
+}
+
+static bool BVHNode_hit(const BVHNode *bvh, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng) {
+  if (!AABB_hit(&bvh->bbox, ray, t_min, t_max))
+    return false;
+
+  // NOTE: we need to check for both left and right, since we don't know which one is closer.
+  bool hit_left = Hittable_hit(bvh->left, ray, t_min, t_max, rec, rng);
+  if (hit_left)
+    t_max = rec->t;
+  bool hit_right = Hittable_hit(bvh->right, ray, t_min, t_max, rec, rng);
+  return hit_left || hit_right;
 }
 
 static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
@@ -266,23 +283,23 @@ static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta) {
   };
 }
 
-static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                         PCG32State *rng) {
   Ray rotated_r = {
       Vec3_rotate_y(ray->origin, rotate_y->cos_theta, rotate_y->sin_theta),
       Vec3_rotate_y(ray->direction, rotate_y->cos_theta, rotate_y->sin_theta),
   };
 
-  if (!Hittable_hit(rotate_y->object, &rotated_r, t_min, t_max, hit_record, rng))
+  if (!Hittable_hit(rotate_y->object, &rotated_r, t_min, t_max, rec, rng))
     return false;
 
-  hit_record->p = Vec3_rotate_y_inverse(hit_record->p, rotate_y->cos_theta, rotate_y->sin_theta);
-  hit_record->normal = Vec3_rotate_y_inverse(hit_record->normal, rotate_y->cos_theta, rotate_y->sin_theta);
+  rec->p = Vec3_rotate_y_inverse(rec->p, rotate_y->cos_theta, rotate_y->sin_theta);
+  rec->normal = Vec3_rotate_y_inverse(rec->normal, rotate_y->cos_theta, rotate_y->sin_theta);
   return true;
 }
 
 static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray *ray, float t_min, float t_max,
-                               HitRecord *hit_record, PCG32State *rng) {
+                               HitRecord *rec, PCG32State *rng) {
   HitRecord rec1, rec2;
 
   if (!Hittable_hit(constant_medium->boundary, ray, -INFINITY, INFINITY, &rec1, rng))
@@ -307,8 +324,8 @@ static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray 
     return false;
 
   // NOTE: we don't need to set normal and front_face, since Isotropic doesn't use them
-  hit_record->t = rec1.t + hit_distance / ray_length;
-  hit_record->p = ray_at(ray, hit_record->t);
-  hit_record->material = constant_medium->phase_fn;
+  rec->t = rec1.t + hit_distance / ray_length;
+  rec->p = ray_at(ray, rec->t);
+  rec->material = constant_medium->phase_fn;
   return true;
 }

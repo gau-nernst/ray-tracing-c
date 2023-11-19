@@ -17,12 +17,13 @@ typedef struct AABB {
 } AABB;
 
 AABB AABB_from_Vec3(Vec3 a, Vec3 b);
-AABB AABB_from_AABB(AABB a, AABB b);
+AABB AABB_from_AABB(AABB *a, AABB *b);
 
 typedef enum HittableType {
   HITTABLE_LIST,
   SPHERE,
   QUAD,
+  BVH_NODE,
   TRANSLATE,
   ROTATE_Y,
   CONSTANT_MEDIUM,
@@ -39,6 +40,7 @@ typedef struct Hittable {
         HittableList *: HITTABLE_LIST,                                                                                 \
         Sphere *: SPHERE,                                                                                              \
         Quad *: QUAD,                                                                                                  \
+        BVHNode *: BVH_NODE,                                                                                           \
         Translate *: TRANSLATE,                                                                                        \
         RotateY *: ROTATE_Y,                                                                                           \
         ConstantMedium *: CONSTANT_MEDIUM),                                                                            \
@@ -84,6 +86,12 @@ void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat);
 Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat);
 
 HittableList *Box_new(Vec3 a, Vec3 b, Material mat);
+
+typedef struct BVHNode {
+  Hittable left;
+  Hittable right;
+  AABB bbox;
+} BVHNode;
 
 typedef struct Translate {
   Hittable object;
