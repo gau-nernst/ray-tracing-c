@@ -16,9 +16,6 @@ typedef struct AABB {
   float x[3][2];
 } AABB;
 
-AABB AABB_from_Vec3(Vec3 a, Vec3 b);
-AABB AABB_from_AABB(const AABB *a, const AABB *b);
-
 typedef enum HittableType {
   HITTABLE_LIST,
   SPHERE,
@@ -58,8 +55,8 @@ void HittableList_init(HittableList *list, size_t max_size);
 HittableList *HittableList_new(size_t max_size);
 void HittableList_append(HittableList *list, Hittable item);
 
-bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record, PCG32State *rng);
-bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
+bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng);
+bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                       PCG32State *rng);
 
 typedef struct Sphere {
@@ -69,8 +66,8 @@ typedef struct Sphere {
   AABB bbox;
 } Sphere;
 
-void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material material);
-Sphere *Sphere_new(Vec3 center, float radius, Material material);
+void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat);
+Sphere *Sphere_new(Vec3 center, float radius, Material mat);
 
 typedef struct Quad {
   Vec3 Q;
