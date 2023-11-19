@@ -35,10 +35,10 @@ Vec3 vec3_rand_between(PCG32State *rng, float lo, float hi) {
 }
 Vec3 vec3_rand_unit_vector(PCG32State *rng) {
   for (;;) {
-    Vec3 v = vec3_rand_between(rng, -1.0f, 1.0f);
-    float length2 = vec3_length2(v);
-    if (length2 < 1)
-      return vec3_div(v, sqrtf(length2));
+    Vec3 u = vec3_rand_between(rng, -1.0f, 1.0f);
+    float length2 = vec3_length2(u);
+    if (length2 < 1.0f)
+      return vec3_div(u, sqrtf(length2));
   }
 }
 Vec3 vec3_rand_hemisphere(Vec3 normal, PCG32State *rng) {
