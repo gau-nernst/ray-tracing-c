@@ -66,7 +66,7 @@ static bool dielectric_scatter(Dielectric *mat, Vec3 incident, HitRecord *hit_re
   float eta = hit_record->front_face ? 1.0f / mat->eta : mat->eta;
   incident = vec3_unit(incident);
 
-  float cos_theta = min(-vec3_dot(incident, hit_record->normal), 1.0f);
+  float cos_theta = fminf(-vec3_dot(incident, hit_record->normal), 1.0f);
   float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
 
   float schlick_r = (1.0f - eta) / (1.0f + eta);

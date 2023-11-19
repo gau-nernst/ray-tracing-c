@@ -3,9 +3,53 @@
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
-define_list_source(Hittable);
+AABB AABB_from_Vec3(Vec3 a, Vec3 b) {
+  return (AABB){{
+      {fminf(a.x[0], b.x[0]), fmaxf(a.x[0], b.x[0])},
+      {fminf(a.x[1], b.x[1]), fmaxf(a.x[1], b.x[1])},
+      {fminf(a.x[2], b.x[2]), fmaxf(a.x[2], b.x[2])},
+  }};
+}
+AABB AABB_from_AABB(AABB a, AABB b) {
+  return (AABB){{
+      {fminf(a.x[0][0], b.x[0][0]), fmaxf(a.x[0][1], b.x[0][1])},
+      {fminf(a.x[1][0], b.x[1][0]), fmaxf(a.x[1][1], b.x[1][1])},
+      {fminf(a.x[2][0], b.x[2][0]), fmaxf(a.x[2][1], b.x[2][1])},
+  }};
+}
 
-Sphere *Sphere_new(Vec3 center, float radius, Material mat) define_struct_new(Sphere, center, radius, mat);
+AABB Hittable_bbox(Hittable obj) {
+  switch (obj.type) {
+  case HITTABLE_LIST:
+    return ((HittableList *)obj.ptr)->bbox;
+  case SPHERE:
+    return ((Sphere *)obj.ptr)->bbox;
+  default:
+    return (AABB){0.0f};
+    // QUAD,
+    // TRANSLATE,
+    // ROTATE_Y,
+    // CONSTANT_MEDIUM,
+  }
+}
+
+void HittableList_init(HittableList *list, size_t max_size) {
+  *list = (HittableList){
+      max_size, 0, my_malloc(sizeof(list->items[0]) * max_size),
+      // bbox is also init to 0
+  };
+}
+HittableList *HittableList_new(size_t max_size) define_init_new(HittableList, max_size);
+void HittableList_append(HittableList *list, Hittable item) {
+  assert((list->size < list->max_size) && "List is full");
+  list->items[list->size++] = item;
+  list->bbox = AABB_from_AABB(list->bbox, Hittable_bbox(item));
+}
+
+void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat) {
+  *sphere = (Sphere){center, radius, mat, AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius))};
+}
+Sphere *Sphere_new(Vec3 center, float radius, Material mat) define_init_new(Sphere, center, radius, mat);
 
 void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material material) {
   quad->Q = Q;
@@ -61,41 +105,41 @@ void ConstantMedium_init(ConstantMedium *constant_medium, Hittable boundary, flo
 ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture albedo)
     define_init_new(ConstantMedium, boundary, density, albedo);
 
-// static bool aabb_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
-//   for (int a = 0; a < 3; a++) {
-//     float invD = 1.0f / ray->direction.x[a];
-//     float t0 = (min(aabb->x[a][0], aabb->x[a][1]) - ray->origin.x[a]) * invD;
-//     float t1 = (max(aabb->x[a][0], aabb->x[a][1]) - ray->origin.x[a]) * invD;
+static bool AABB_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
+  for (int a = 0; a < 3; a++) {
+    float invD = 1.0f / ray->direction.x[a];
+    float t0 = (fminf(aabb->x[a][0], aabb->x[a][1]) - ray->origin.x[a]) * invD;
+    float t1 = (fmaxf(aabb->x[a][0], aabb->x[a][1]) - ray->origin.x[a]) * invD;
 
-//     if (invD < 0) {
-//       float tmp = t0;
-//       t0 = t1;
-//       t1 = tmp;
-//     }
-//     if (t0 > t_min)
-//       t_min = t0;
-//     if (t1 < t_max)
-//       t_max = t1;
-//     if (t_max < t_min)
-//       return false;
-//   }
-//   return true;
-// }
+    if (invD < 0) {
+      float tmp = t0;
+      t0 = t1;
+      t1 = tmp;
+    }
+    if (t0 > t_min)
+      t_min = t0;
+    if (t1 < t_max)
+      t_max = t1;
+    if (t_max < t_min)
+      return false;
+  }
+  return true;
+}
 
-// AABB aabb_pad(const AABB *aabb) {
-//   float delta = 1e-4f;
-//   AABB padded;
-//   for (int a = 0; a < 3; a++) {
-//     if (aabb->x[a][1] - aabb->x[a][0] < delta) {
-//       padded.x[a][0] = aabb->x[a][0] - delta;
-//       padded.x[a][1] = aabb->x[a][1] + delta;
-//     } else {
-//       padded.x[a][0] = aabb->x[a][0];
-//       padded.x[a][1] = aabb->x[a][1];
-//     }
-//   }
-//   return padded;
-// }
+AABB AABB_pad(const AABB *aabb) {
+  float delta = 1e-4f;
+  AABB padded;
+  for (int a = 0; a < 3; a++) {
+    if (aabb->x[a][1] - aabb->x[a][0] < delta) {
+      padded.x[a][0] = aabb->x[a][0] - delta;
+      padded.x[a][1] = aabb->x[a][1] + delta;
+    } else {
+      padded.x[a][0] = aabb->x[a][0];
+      padded.x[a][1] = aabb->x[a][1];
+    }
+  }
+  return padded;
+}
 
 static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
 static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
@@ -247,8 +291,8 @@ static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray 
   if (!Hittable_hit(constant_medium->boundary, ray, rec1.t + 0.0001f, INFINITY, &rec2, rng))
     return false;
 
-  rec1.t = max(rec1.t, t_min);
-  rec2.t = min(rec2.t, t_max);
+  rec1.t = fmaxf(rec1.t, t_min);
+  rec2.t = fminf(rec2.t, t_max);
 
   if (rec1.t >= rec2.t)
     return false;

@@ -12,6 +12,13 @@ typedef struct Ray {
 
 Vec3 ray_at(const Ray *ray, float t);
 
+typedef struct AABB {
+  float x[3][2];
+} AABB;
+
+AABB AABB_from_Vec3(Vec3 a, Vec3 b);
+AABB AABB_from_AABB(AABB a, AABB b);
+
 typedef enum HittableType {
   HITTABLE_LIST,
   SPHERE,
@@ -38,7 +45,16 @@ typedef struct Hittable {
         ptr                                                                                                            \
   }
 
-define_list_header(Hittable);
+typedef struct HittableList {
+  size_t max_size;
+  size_t size;
+  Hittable *items;
+  AABB bbox;
+} HittableList;
+
+void HittableList_init(HittableList *list, size_t max_size);
+HittableList *HittableList_new(size_t max_size);
+void HittableList_append(HittableList *list, Hittable item);
 
 bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record, PCG32State *rng);
 bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record,
@@ -48,8 +64,10 @@ typedef struct Sphere {
   Vec3 center;
   float radius;
   Material material;
+  AABB bbox;
 } Sphere;
 
+void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material material);
 Sphere *Sphere_new(Vec3 center, float radius, Material material);
 
 typedef struct Quad {
@@ -91,9 +109,5 @@ typedef struct ConstantMedium {
 
 void ConstantMedium_init(ConstantMedium *constant_medium, Hittable boundary, float density, Texture albedo);
 ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture albedo);
-
-// typedef struct AABB {
-//   float x[3][2];
-// } AABB;
 
 #endif // HITTABLE_H
