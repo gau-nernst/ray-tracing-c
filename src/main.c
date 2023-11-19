@@ -59,7 +59,7 @@ void scene_book1(World *world, Camera *camera) {
       }
     }
 
-  BVHNode *bvh = BVHNode_new(world->objects.items, world->objects.size, &rng);
+  BVHNode *bvh = BVHNode_new(&world->objects, &rng);
   free(world->objects.items);
   HittableList_init(&world->objects, 1);
   HittableList_append(&world->objects, hittable(bvh));
@@ -185,23 +185,33 @@ void scene_cornell_box(World *world, Camera *camera) {
   camera->look_to = (Vec3){278, 278, 0};
 }
 
-void scene_book2_final(World *world, Camera *camera) {
+void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   PCG32State rng;
   pcg32_seed(&rng, 19, 29);
-  int boxes_per_side = 20;
 
-  World_init(world, boxes_per_side * boxes_per_side + 10, 10);
+  World_init(world, 11, 10);
 
   Material ground = material(Lambertian_new(texture(Vec3_new(0.48, 0.83, 0.53))));
   MaterialList_append(&world->materials, ground);
 
+  int boxes_per_side = 20;
+  HittableList *boxes1_list = HittableList_new(boxes_per_side * boxes_per_side);
   for (int i = 0; i < boxes_per_side; i++)
     for (int j = 0; j < boxes_per_side; j++) {
-      float w = 100;
-      Vec3 p0 = {-1000 + i * w, 0, -1000 + j * w};
-      Vec3 p1 = {-1000 + (i + 1) * w, pcg32_f32_between(&rng, 1, 101), -1000 + (j + 1) * w};
-      HittableList_append(&world->objects, hittable(Box_new(p0, p1, ground)));
+      float w = 100.0f;
+      Vec3 p0 = {-1000.0f + i * w, 0.0f, -1000.0f + j * w};
+      Vec3 p1 = {-1000.0f + (i + 1) * w, pcg32_f32_between(&rng, 1, 101), -1000.0f + (j + 1) * w};
+      HittableList_append(boxes1_list, hittable(Box_new(p0, p1, ground)));
     }
+
+  Hittable boxes1;
+  if (enable_bvh) {
+    boxes1 = hittable(BVHNode_new(boxes1_list, &rng));
+    free(boxes1_list->items);
+    free(boxes1_list);
+  } else
+    boxes1 = hittable(boxes1_list);
+  HittableList_append(&world->objects, boxes1);
 
   Material light = material(DiffuseLight_new(texture(Vec3_new(7, 7, 7))));
   MaterialList_append(&world->materials, light);
@@ -209,7 +219,7 @@ void scene_book2_final(World *world, Camera *camera) {
                       hittable(Quad_new((Vec3){123, 554, 147}, (Vec3){300, 0, 0}, (Vec3){0, 0, 265}, light)));
 
   Vec3 center1 = {400, 400, 200};
-  Vec3 center2 = {430, 400, 200}; // TODO: moving sphere
+  // Vec3 center2 = {430, 400, 200}; // TODO: moving sphere
   Material sphere_mat = material(Lambertian_new(texture(Vec3_new(0.7, 0.3, 0.1))));
   MaterialList_append(&world->materials, sphere_mat);
   HittableList_append(&world->objects, hittable(Sphere_new(center1, 50, sphere_mat)));
@@ -241,12 +251,22 @@ void scene_book2_final(World *world, Camera *camera) {
 
   Material white = material(Lambertian_new(texture(Vec3_new(0.73, 0.73, 0.73))));
   MaterialList_append(&world->materials, white);
-  int ns = 1000;
-  Hittable boxes2 = hittable(HittableList_new(ns));
-  for (int i = 0; i < ns; i++)
-    HittableList_append(boxes2.ptr, hittable(Sphere_new(vec3_rand_between(&rng, 0, 165), 10, white)));
 
-  boxes2 = hittable(RotateY_new(boxes2, 15));
+  int ns = 1000;
+  HittableList *boxes2_list = HittableList_new(ns);
+  for (int i = 0; i < ns; i++) {
+    Vec3 center = vec3_rand_between(&rng, 0, 165);
+    HittableList_append(boxes2_list, hittable(Sphere_new(center, 10, white)));
+  }
+  Hittable boxes2;
+  if (enable_bvh) {
+    boxes2 = hittable(BVHNode_new(boxes2_list, &rng));
+    free(boxes2_list->items);
+    free(boxes2_list);
+  } else
+    boxes2 = hittable(boxes2_list);
+
+  boxes2 = hittable(RotateY_new(boxes2, 15.0f));
   boxes2 = hittable(Translate_new(boxes2, (Vec3){-100, 270, 395}));
   HittableList_append(&world->objects, boxes2);
 
@@ -304,7 +324,7 @@ int main(int argc, char *argv[]) {
     break;
   case 6:
     fprintf(stderr, "Book 2: Final scene\n");
-    scene_book2_final(&world, &camera);
+    scene_book2_final(&world, &camera, true);
     break;
   }
   Camera_init(&camera);

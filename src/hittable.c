@@ -124,7 +124,7 @@ HittableList *Box_new(Vec3 a, Vec3 b, Material mat) {
   return list;
 }
 
-void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t n, PCG32State *rng) {
+static void _BVHNode_init(BVHNode *bvh, const Hittable *list, size_t n, PCG32State *rng) {
   // make a copy
   Hittable *list_ = my_malloc(sizeof(Hittable) * n);
   for (int i = 0; i < n; i++)
@@ -150,13 +150,24 @@ void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t n, PCG32State *rng)
     qsort(list_, n, sizeof(Hittable), comparator);
 
     size_t mid = n / 2;
-    bvh->left = hittable(BVHNode_new(list_, mid, rng));
-    bvh->right = hittable(BVHNode_new(list_ + mid, n - mid, rng));
+    // bvh->left = hittable(BVHNode_new(list_, mid, rng));
+    // bvh->right = hittable(BVHNode_new(list_ + mid, n - mid, rng));
+
+    BVHNode *left = my_malloc(sizeof(BVHNode));
+    _BVHNode_init(left, list_, mid, rng);
+    bvh->left = hittable(left);
+
+    BVHNode *right = my_malloc(sizeof(BVHNode));
+    _BVHNode_init(right, list_ + mid, n - mid, rng);
+    bvh->right = hittable(right);
   }
   free(list_); // we don't need this anymore
   bvh->bbox = AABB_from_AABB(Hittable_bbox(bvh->left), Hittable_bbox(bvh->right));
 }
-BVHNode *BVHNode_new(const Hittable *list, size_t n, PCG32State *rng) define_init_new(BVHNode, list, n, rng);
+void BVHNode_init(BVHNode *bvh, const HittableList *list, PCG32State *rng) {
+  _BVHNode_init(bvh, list->items, list->size, rng);
+}
+BVHNode *BVHNode_new(const HittableList *list, PCG32State *rng) define_init_new(BVHNode, list, rng);
 
 void Translate_init(Translate *translate, Hittable object, Vec3 offset) {
   AABB bbox = Hittable_bbox(object);

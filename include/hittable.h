@@ -91,8 +91,8 @@ typedef struct BVHNode {
   AABB bbox;
 } BVHNode;
 
-void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t n, PCG32State *rng);
-BVHNode *BVHNode_new(const Hittable *list, size_t n, PCG32State *rng);
+void BVHNode_init(BVHNode *bvh, const HittableList *list, PCG32State *rng);
+BVHNode *BVHNode_new(const HittableList *list, PCG32State *rng);
 
 typedef struct Translate {
   Hittable object;
