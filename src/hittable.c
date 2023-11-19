@@ -1,9 +1,13 @@
 #include "hittable.h"
+#include "vec3.h"
 #include <math.h>
 
 const static AABB AABB_EMPTY = {{{INFINITY, -INFINITY}, {INFINITY, -INFINITY}, {INFINITY, -INFINITY}}};
 static AABB AABB_from_Vec3(Vec3 a, Vec3 b);
-static AABB AABB_from_AABB(const AABB *a, const AABB *b);
+static AABB AABB_from_AABB(AABB a, AABB b);
+static AABB AABB_pad(AABB bbox);
+static Vec3 Vec3_rotate_y(Vec3 u, float cos_theta, float sin_theta);
+static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta);
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
@@ -14,12 +18,26 @@ static AABB AABB_from_Vec3(Vec3 a, Vec3 b) {
       {fminf(a.x[2], b.x[2]), fmaxf(a.x[2], b.x[2])},
   }};
 }
-static AABB AABB_from_AABB(const AABB *a, const AABB *b) {
+static AABB AABB_from_AABB(AABB a, AABB b) {
   return (AABB){{
-      {fminf(a->x[0][0], b->x[0][0]), fmaxf(a->x[0][1], b->x[0][1])},
-      {fminf(a->x[1][0], b->x[1][0]), fmaxf(a->x[1][1], b->x[1][1])},
-      {fminf(a->x[2][0], b->x[2][0]), fmaxf(a->x[2][1], b->x[2][1])},
+      {fminf(a.x[0][0], b.x[0][0]), fmaxf(a.x[0][1], b.x[0][1])},
+      {fminf(a.x[1][0], b.x[1][0]), fmaxf(a.x[1][1], b.x[1][1])},
+      {fminf(a.x[2][0], b.x[2][0]), fmaxf(a.x[2][1], b.x[2][1])},
   }};
+}
+static AABB AABB_pad(AABB bbox) {
+  float delta = 1e-4f;
+  AABB padded;
+  for (int a = 0; a < 3; a++) {
+    if (bbox.x[a][1] - bbox.x[a][0] < delta) {
+      padded.x[a][0] = bbox.x[a][0] - delta;
+      padded.x[a][1] = bbox.x[a][1] + delta;
+    } else {
+      padded.x[a][0] = bbox.x[a][0];
+      padded.x[a][1] = bbox.x[a][1];
+    }
+  }
+  return padded;
 }
 
 static AABB Hittable_bbox(Hittable obj) {
@@ -29,13 +47,13 @@ static AABB Hittable_bbox(Hittable obj) {
   case SPHERE:
     return ((Sphere *)obj.ptr)->bbox;
   case QUAD:
-    assert(false && "Not implemented");
+    return ((Quad *)obj.ptr)->bbox;
   case BVH_NODE:
     return ((BVHNode *)obj.ptr)->bbox;
   case TRANSLATE:
-    return Hittable_bbox(((Translate *)obj.ptr)->object);
+    return ((Translate *)obj.ptr)->bbox;
   case ROTATE_Y:
-    return Hittable_bbox(((RotateY *)obj.ptr)->object);
+    return ((RotateY *)obj.ptr)->bbox;
   case CONSTANT_MEDIUM:
     return Hittable_bbox(((ConstantMedium *)obj.ptr)->boundary);
   default:
@@ -61,9 +79,7 @@ HittableList *HittableList_new(size_t max_size) define_init_new(HittableList, ma
 void HittableList_append(HittableList *list, Hittable item) {
   assert((list->size < list->max_size) && "List is full");
   list->items[list->size++] = item;
-
-  AABB item_bbox = Hittable_bbox(item);
-  list->bbox = AABB_from_AABB(&list->bbox, &item_bbox);
+  list->bbox = AABB_from_AABB(list->bbox, Hittable_bbox(item));
 }
 
 void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat) {
@@ -76,6 +92,7 @@ void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat) {
   quad->u = u;
   quad->v = v;
   quad->material = mat;
+  quad->bbox = AABB_pad(AABB_from_Vec3(Q, vec3_add(Q, u, v)));
 
   Vec3 n = vec3_cross(quad->u, quad->v);
   quad->normal = vec3_unit(n);
@@ -137,18 +154,42 @@ void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t n, PCG32State *rng)
     bvh->right = hittable(BVHNode_new(list_ + mid, n - mid, rng));
   }
   free(list_); // we don't need this anymore
-
-  AABB left_bbox = Hittable_bbox(bvh->left);
-  AABB right_bbox = Hittable_bbox(bvh->right);
-  bvh->bbox = AABB_from_AABB(&left_bbox, &right_bbox);
+  bvh->bbox = AABB_from_AABB(Hittable_bbox(bvh->left), Hittable_bbox(bvh->right));
 }
 BVHNode *BVHNode_new(const Hittable *list, size_t n, PCG32State *rng) define_init_new(BVHNode, list, n, rng);
 
-Translate *Translate_new(Hittable object, Vec3 offset) define_struct_new(Translate, object, offset);
+void Translate_init(Translate *translate, Hittable object, Vec3 offset) {
+  AABB bbox = Hittable_bbox(object);
+  for (int i = 0; i < 3; i++) {
+    bbox.x[i][0] += offset.x[i];
+    bbox.x[i][1] += offset.x[i];
+  }
+  *translate = (Translate){object, offset, bbox};
+}
+Translate *Translate_new(Hittable object, Vec3 offset) define_init_new(Translate, object, offset);
 
 void RotateY_init(RotateY *rotate_y, Hittable object, float angle) {
   angle = angle * (float)M_PI / 180.f;
-  *rotate_y = (RotateY){object, sinf(angle), cosf(angle)};
+  float sin_theta = sinf(angle);
+  float cos_theta = cosf(angle);
+
+  AABB bbox = Hittable_bbox(object);
+  Vec3 min_p = {INFINITY, INFINITY, INFINITY};
+  Vec3 max_p = {-INFINITY, -INFINITY, -INFINITY};
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++) {
+        Vec3 tester = {
+            (float)i * bbox.x[0][1] + (float)(1 - i) * bbox.x[0][0],
+            (float)j * bbox.x[1][1] + (float)(1 - j) * bbox.x[1][0],
+            (float)k * bbox.x[2][1] + (float)(1 - k) * bbox.x[2][0],
+        };
+        tester = Vec3_rotate_y_inverse(tester, cos_theta, sin_theta);
+        min_p = vec3_min(min_p, tester);
+        max_p = vec3_max(max_p, tester);
+      }
+
+  *rotate_y = (RotateY){object, sin_theta, cos_theta, AABB_from_Vec3(min_p, max_p)};
 }
 RotateY *RotateY_new(Hittable object, float angle) define_init_new(RotateY, object, angle);
 
@@ -173,30 +214,12 @@ static bool AABB_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max)
       t0 = t1;
       t1 = tmp;
     }
-    if (t0 > t_min)
-      t_min = t0;
-    if (t1 < t_max)
-      t_max = t1;
-
+    t_min = fmaxf(t_min, t0);
+    t_max = fminf(t_max, t1);
     if (t_max <= t_min)
       return false;
   }
   return true;
-}
-
-AABB AABB_pad(const AABB *aabb) {
-  float delta = 1e-4f;
-  AABB padded;
-  for (int a = 0; a < 3; a++) {
-    if (aabb->x[a][1] - aabb->x[a][0] < delta) {
-      padded.x[a][0] = aabb->x[a][0] - delta;
-      padded.x[a][1] = aabb->x[a][1] + delta;
-    } else {
-      padded.x[a][0] = aabb->x[a][0];
-      padded.x[a][1] = aabb->x[a][1];
-    }
-  }
-  return padded;
 }
 
 static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *rec);

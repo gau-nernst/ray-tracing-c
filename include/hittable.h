@@ -77,6 +77,7 @@ typedef struct Quad {
   float D;
   Vec3 w;
   Material material;
+  AABB bbox;
 } Quad;
 
 void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat);
@@ -96,14 +97,17 @@ BVHNode *BVHNode_new(const Hittable *list, size_t n, PCG32State *rng);
 typedef struct Translate {
   Hittable object;
   Vec3 offset;
+  AABB bbox;
 } Translate;
 
+void Translate_init(Translate *translate, Hittable object, Vec3 offset);
 Translate *Translate_new(Hittable object, Vec3 offset);
 
 typedef struct RotateY {
   Hittable object;
   float sin_theta;
   float cos_theta;
+  AABB bbox;
 } RotateY;
 
 void RotateY_init(RotateY *rotate_y, Hittable object, float angle);
