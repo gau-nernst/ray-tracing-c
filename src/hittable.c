@@ -100,19 +100,18 @@ HittableList *Box_new(Vec3 a, Vec3 b, Material mat) {
   return box;
 }
 
-void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t start, size_t end, PCG32State *rng) {
+void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t n, PCG32State *rng) {
   // make a copy
-  size_t span = end - start;
-  Hittable *list_ = my_malloc(sizeof(Hittable) * span);
-  for (int i = 0; i < span; i++)
-    list_[i] = list[start + i];
+  Hittable *list_ = my_malloc(sizeof(Hittable) * n);
+  for (int i = 0; i < n; i++)
+    list_[i] = list[i];
 
   int axis = pcg32_u32_between(rng, 0, 3);
 
-  if (span == 1) {
+  if (n == 1) {
     bvh->left = list_[0];
     bvh->right = list_[0];
-  } else if (span == 2) {
+  } else if (n == 2) {
     if (Hittable_compare_bbox(list_, list_ + 1, axis) < 0) {
       bvh->left = list_[0];
       bvh->right = list_[1];
@@ -124,19 +123,19 @@ void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t start, size_t end, 
     Comparator comparator = (axis == 0)   ? Hittable_compare_bbox_x
                             : (axis == 1) ? Hittable_compare_bbox_y
                                           : Hittable_compare_bbox_z;
-    qsort(list_, span, sizeof(Hittable), comparator);
+    qsort(list_, n, sizeof(Hittable), comparator);
 
-    size_t mid = span / 2;
-    bvh->left = hittable(BVHNode_new(list_, 0, mid, rng));
-    bvh->right = hittable(BVHNode_new(list_, mid, span, rng));
+    size_t mid = n / 2;
+    bvh->left = hittable(BVHNode_new(list_, mid, rng));
+    bvh->right = hittable(BVHNode_new(list_ + mid, n - mid, rng));
   }
+  free(list_); // we don't need this anymore
 
   AABB left_bbox = Hittable_bbox(bvh->left);
   AABB right_bbox = Hittable_bbox(bvh->right);
   bvh->bbox = AABB_from_AABB(&left_bbox, &right_bbox);
 }
-BVHNode *BVHNode_new(const Hittable *list, size_t start, size_t end, PCG32State *rng)
-    define_init_new(BVHNode, list, start, end, rng);
+BVHNode *BVHNode_new(const Hittable *list, size_t n, PCG32State *rng) define_init_new(BVHNode, list, n, rng);
 
 Translate *Translate_new(Hittable object, Vec3 offset) define_struct_new(Translate, object, offset);
 

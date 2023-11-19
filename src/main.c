@@ -59,7 +59,7 @@ void scene_book1(World *world, Camera *camera) {
       }
     }
 
-  BVHNode *bvh = BVHNode_new(world->objects.items, 0, world->objects.size, &rng);
+  BVHNode *bvh = BVHNode_new(world->objects.items, world->objects.size, &rng);
   free(world->objects.items);
   HittableList_init(&world->objects, 1);
   HittableList_append(&world->objects, hittable(bvh));
