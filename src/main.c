@@ -59,6 +59,11 @@ void scene_book1(World *world, Camera *camera) {
       }
     }
 
+  BVHNode *bvh = BVHNode_new(world->objects.items, 0, world->objects.size, &rng);
+  free(world->objects.items);
+  HittableList_init(&world->objects, 1);
+  HittableList_append(&world->objects, hittable(bvh));
+
   camera->vfov = 20.0f;
   camera->background = (Vec3){0.7, 0.8, 1};
   camera->look_from = (Vec3){13, 2, 3};

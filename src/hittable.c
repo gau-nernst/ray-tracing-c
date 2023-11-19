@@ -10,7 +10,7 @@ AABB AABB_from_Vec3(Vec3 a, Vec3 b) {
       {fminf(a.x[2], b.x[2]), fmaxf(a.x[2], b.x[2])},
   }};
 }
-AABB AABB_from_AABB(AABB *a, AABB *b) {
+AABB AABB_from_AABB(const AABB *a, const AABB *b) {
   return (AABB){{
       {fminf(a->x[0][0], b->x[0][0]), fmaxf(a->x[0][1], b->x[0][1])},
       {fminf(a->x[1][0], b->x[1][0]), fmaxf(a->x[1][1], b->x[1][1])},
@@ -32,6 +32,17 @@ AABB Hittable_bbox(Hittable obj) {
     // CONSTANT_MEDIUM,
   }
 }
+
+// for use with qsort()
+typedef int (*Comparator)(const void *, const void *);
+static int Hittable_compare_bbox(const Hittable *a, const Hittable *b, int axis) {
+  float a_ = Hittable_bbox(*a).x[axis][0];
+  float b_ = Hittable_bbox(*b).x[axis][0];
+  return (a_ < b_) ? -1 : (a_ > b_) ? 1 : 0;
+}
+static int Hittable_compare_bbox_x(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 0); }
+static int Hittable_compare_bbox_y(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 1); }
+static int Hittable_compare_bbox_z(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 2); }
 
 void HittableList_init(HittableList *list, size_t max_size) {
   *list = (HittableList){
@@ -88,6 +99,44 @@ HittableList *Box_new(Vec3 a, Vec3 b, Material mat) {
 
   return box;
 }
+
+void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t start, size_t end, PCG32State *rng) {
+  // make a copy
+  size_t span = end - start;
+  Hittable *list_ = my_malloc(sizeof(Hittable) * span);
+  for (int i = 0; i < span; i++)
+    list_[i] = list[start + i];
+
+  int axis = pcg32_u32_between(rng, 0, 3);
+
+  if (span == 1) {
+    bvh->left = list_[0];
+    bvh->right = list_[0];
+  } else if (span == 2) {
+    if (Hittable_compare_bbox(list_, list_ + 1, axis) < 0) {
+      bvh->left = list_[0];
+      bvh->right = list_[1];
+    } else {
+      bvh->left = list_[1];
+      bvh->right = list_[0];
+    }
+  } else {
+    Comparator comparator = (axis == 0)   ? Hittable_compare_bbox_x
+                            : (axis == 1) ? Hittable_compare_bbox_y
+                                          : Hittable_compare_bbox_z;
+    qsort(list_, span, sizeof(Hittable), comparator);
+
+    size_t mid = span / 2;
+    bvh->left = hittable(BVHNode_new(list_, 0, mid, rng));
+    bvh->right = hittable(BVHNode_new(list_, mid, span, rng));
+  }
+
+  AABB left_bbox = Hittable_bbox(bvh->left);
+  AABB right_bbox = Hittable_bbox(bvh->right);
+  bvh->bbox = AABB_from_AABB(&left_bbox, &right_bbox);
+}
+BVHNode *BVHNode_new(const Hittable *list, size_t start, size_t end, PCG32State *rng)
+    define_init_new(BVHNode, list, start, end, rng);
 
 Translate *Translate_new(Hittable object, Vec3 offset) define_struct_new(Translate, object, offset);
 

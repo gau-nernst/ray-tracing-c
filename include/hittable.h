@@ -17,7 +17,7 @@ typedef struct AABB {
 } AABB;
 
 AABB AABB_from_Vec3(Vec3 a, Vec3 b);
-AABB AABB_from_AABB(AABB *a, AABB *b);
+AABB AABB_from_AABB(const AABB *a, const AABB *b);
 
 typedef enum HittableType {
   HITTABLE_LIST,
@@ -92,6 +92,9 @@ typedef struct BVHNode {
   Hittable right;
   AABB bbox;
 } BVHNode;
+
+void BVHNode_init(BVHNode *bvh, const Hittable *list, size_t start, size_t end, PCG32State *rng);
+BVHNode *BVHNode_new(const Hittable *list, size_t start, size_t end, PCG32State *rng);
 
 typedef struct Translate {
   Hittable object;
