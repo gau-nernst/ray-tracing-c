@@ -24,7 +24,7 @@ Vec3 Texture_value(Texture texture, float u, float v, Vec3 p) {
   case PERLIN:
     return Perlin_value(texture.ptr, p);
   default:
-    return (Vec3){0, 0, 0};
+    return VEC3_ZERO;
   }
 }
 
@@ -51,11 +51,8 @@ static Vec3 Image_value(Image *image, float u, float v) {
   int i = (int)roundf(u * (float)(image->width - 1));
   int j = (int)roundf((1.0f - v) * (float)(image->height - 1));
   int offset = ((j * image->width) + i) * 3;
-  return (Vec3){
-      (float)image->buffer[offset] / 255.0f,
-      (float)image->buffer[offset + 1] / 255.0f,
-      (float)image->buffer[offset + 2] / 255.0f,
-  };
+  return vec3((float)image->buffer[offset] / 255.0f, (float)image->buffer[offset + 1] / 255.0f,
+              (float)image->buffer[offset + 2] / 255.0f);
 }
 
 static void Perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
@@ -82,13 +79,13 @@ void Perlin_init(Perlin *perlin, float scale, int depth, PCG32State *rng) {
 static float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
 
 static float Perlin_noise(Perlin *perlin, Vec3 p) {
-  int i = (int)floorf(p.x[0]);
-  int j = (int)floorf(p.x[1]);
-  int k = (int)floorf(p.x[2]);
+  int i = (int)floorf(p.x);
+  int j = (int)floorf(p.y);
+  int k = (int)floorf(p.z);
 
-  float t1 = p.x[0] - (float)i;
-  float t2 = p.x[1] - (float)j;
-  float t3 = p.x[2] - (float)k;
+  float t1 = p.x - (float)i;
+  float t2 = p.y - (float)j;
+  float t3 = p.z - (float)k;
 
   float tt1 = hermitian_smoothing(t1);
   float tt2 = hermitian_smoothing(t2);
@@ -100,7 +97,7 @@ static float Perlin_noise(Perlin *perlin, Vec3 p) {
       for (int dk = 0; dk < 2; dk++) {
         Vec3 grad = perlin->grad_field[perlin->perm_x[(i + di) & 255] ^ perlin->perm_y[(j + dj) & 255] ^
                                        perlin->perm_z[(k + dk) & 255]];
-        Vec3 weight = {t1 - di, t2 - dj, t3 - dk};
+        Vec3 weight = vec3(t1 - di, t2 - dj, t3 - dk);
         value += vec3_dot(grad, weight) * (di * tt1 + (1 - di) * (1.0f - tt1)) * (dj * tt2 + (1 - dj) * (1.0f - tt2)) *
                  (dk * tt3 + (1 - dk) * (1.0f - tt3));
       }
@@ -121,6 +118,6 @@ static float Perlin_turbulence(Perlin *perlin, Vec3 p) {
 
 static Vec3 Perlin_value(Perlin *perlin, Vec3 p) {
   p = vec3_mul(p, perlin->scale);
-  float value = 0.5f * (1.0f + sinf(p.x[2] + 10.0f * Perlin_turbulence(perlin, p)));
-  return (Vec3){value, value, value};
+  float value = 0.5f * (1.0f + sinf(p.z + 10.0f * Perlin_turbulence(perlin, p)));
+  return vec3(value, value, value);
 }

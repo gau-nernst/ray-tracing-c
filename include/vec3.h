@@ -16,10 +16,19 @@
 #define vec3_div(x, y) _Generic((y), Vec3: vec3vec3_div, float: vec3float_div)(x, y)
 
 typedef struct Vec3 {
-  float x[3];
+  union {
+    struct {
+      float x;
+      float y;
+      float z;
+    };
+    float values[3];
+  };
 } Vec3;
 
-Vec3 *Vec3_new(float x0, float x1, float x2);
+extern const Vec3 VEC3_ZERO;
+Vec3 vec3(float x, float y, float z);
+Vec3 *Vec3_new(float x, float y, float z);
 Vec3 vec3_neg(Vec3 u);
 Vec3 vec3vec3_add(Vec3 u, Vec3 v);
 Vec3 vec3vec3_sub(Vec3 u, Vec3 v);

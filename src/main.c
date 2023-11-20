@@ -26,7 +26,7 @@ void scene_metal_and_lambertian(World *world, Camera *camera) {
 
   camera->vfov = 90.0f;
   camera->background = (Vec3){0.7, 0.8, 1};
-  camera->look_from = (Vec3){0, 0, 0};
+  camera->look_from = VEC3_ZERO;
   camera->look_to = (Vec3){0, 0, -1};
 }
 
@@ -94,7 +94,7 @@ void scene_book1_final(World *world, Camera *camera) {
   camera->vfov = 20.0f;
   camera->background = (Vec3){0.7, 0.8, 1};
   camera->look_from = (Vec3){13, 2, 3};
-  camera->look_to = (Vec3){0, 0, 0};
+  camera->look_to = VEC3_ZERO;
   camera->dof_angle = 0.6f;
 }
 
@@ -111,7 +111,7 @@ void scene_checker(World *world, Camera *camera) {
   camera->vfov = 20.0f;
   camera->background = (Vec3){0.7, 0.8, 1};
   camera->look_from = (Vec3){13, 2, 3};
-  camera->look_to = (Vec3){0, 0, 0};
+  camera->look_to = VEC3_ZERO;
 }
 
 void scene_earth(World *world, Camera *camera) {
@@ -119,12 +119,12 @@ void scene_earth(World *world, Camera *camera) {
 
   Material mat = material(Lambertian_new(texture(Image_new("earthmap.jpg"))));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){0, 0, 0}, 2, mat)));
+  HittableList_append(&world->objects, hittable(Sphere_new(VEC3_ZERO, 2, mat)));
 
   camera->vfov = 20.0f;
   camera->background = (Vec3){0.7, 0.8, 1};
   camera->look_from = (Vec3){13, 2, 3};
-  camera->look_to = (Vec3){0, 0, 0};
+  camera->look_to = VEC3_ZERO;
 }
 
 void scene_perlin(World *world, Camera *camera) {
@@ -142,7 +142,7 @@ void scene_perlin(World *world, Camera *camera) {
   camera->vfov = 20.0f;
   camera->background = (Vec3){0.7, 0.8, 1};
   camera->look_from = (Vec3){13, 2, 3};
-  camera->look_to = (Vec3){0, 0, 0};
+  camera->look_to = VEC3_ZERO;
   camera->dof_angle = 0.0f;
   camera->focal_length = 10.0f;
 }
@@ -165,7 +165,7 @@ void scene_simple_light(World *world, Camera *camera) {
   HittableList_append(&world->objects, hittable(Quad_new((Vec3){3, 1, -2}, (Vec3){2, 0, 0}, (Vec3){0, 2, 0}, light)));
 
   camera->vfov = 20.0f;
-  camera->background = (Vec3){0, 0, 0};
+  camera->background = VEC3_ZERO;
   camera->look_from = (Vec3){26, 3, 6};
   camera->look_to = (Vec3){0, 2, 0};
 }
@@ -185,7 +185,7 @@ void scene_cornell_box(World *world, Camera *camera) {
 
   HittableList_append(&world->objects,
                       hittable(Quad_new((Vec3){555, 0, 0}, (Vec3){0, 555, 0}, (Vec3){0, 0, 555}, green)));
-  HittableList_append(&world->objects, hittable(Quad_new((Vec3){0, 0, 0}, (Vec3){0, 555, 0}, (Vec3){0, 0, 555}, red)));
+  HittableList_append(&world->objects, hittable(Quad_new(vec3(0, 0, 0), (Vec3){0, 555, 0}, (Vec3){0, 0, 555}, red)));
   HittableList_append(&world->objects,
                       hittable(Quad_new((Vec3){343, 554, 332}, (Vec3){-130, 0, 0}, (Vec3){0, 0, -105}, light)));
   HittableList_append(&world->objects,
@@ -298,7 +298,7 @@ void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   HittableList_append(&world->objects, boxes2);
 
   camera->aspect_ratio = 1.0f;
-  camera->background = (Vec3){0, 0, 0};
+  camera->background = VEC3_ZERO;
   camera->vfov = 40.0f;
   camera->look_from = (Vec3){478, 278, -600};
   camera->look_to = (Vec3){278, 278, 0};
@@ -332,6 +332,7 @@ int main(int argc, char *argv[]) {
   case 1:
     fprintf(stderr, "Book 1: Final scene\n");
     scene_book1_final(&world, &camera);
+    break;
   case 2:
     fprintf(stderr, "Book 2: Checker\n");
     scene_checker(&world, &camera);
