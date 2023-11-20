@@ -2,7 +2,7 @@
 #include "utils.h"
 #include <math.h>
 
-const Vec3 VEC3_ZERO = {{{0.0f, 0.0f, 0.0f}}};
+const Vec3 VEC3_ZERO = {{0.0f, 0.0f, 0.0f}};
 Vec3 vec3(float x, float y, float z) { return (Vec3){.x = x, .y = y, .z = z}; }
 Vec3 *Vec3_new(float x, float y, float z) define_struct_new(Vec3, .x = x, .y = y, .z = z);
 Vec3 vec3_neg(Vec3 u) { return vec3(-u.x, -u.y, -u.z); }
