@@ -3,15 +3,9 @@
 #include "vec3.h"
 #include <math.h>
 
-const static AABB AABB_EMPTY = {{{INFINITY, -INFINITY}, {INFINITY, -INFINITY}, {INFINITY, -INFINITY}}};
-static AABB AABB_from_Vec3(Vec3 a, Vec3 b);
-static AABB AABB_from_AABB(AABB a, AABB b);
-static AABB AABB_pad(AABB bbox);
-static Vec3 Vec3_rotate_y(Vec3 u, float cos_theta, float sin_theta);
-static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta);
-
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
 
+const static AABB AABB_EMPTY = {{{INFINITY, -INFINITY}, {INFINITY, -INFINITY}, {INFINITY, -INFINITY}}};
 static AABB AABB_from_Vec3(Vec3 a, Vec3 b) {
   return (AABB){{
       {fminf(a.x, b.x), fmaxf(a.x, b.x)},
@@ -40,27 +34,6 @@ static AABB AABB_pad(AABB bbox) {
   }
   return padded;
 }
-
-// static AABB Hittable_bbox(Hittable obj) {
-//   switch (obj.type) {
-//   case HITTABLE_LIST:
-//     return ((HittableList *)obj.ptr)->bbox;
-//   case SPHERE:
-//     return ((Sphere *)obj.ptr)->bbox;
-//   case QUAD:
-//     return ((Quad *)obj.ptr)->bbox;
-//   case BVH_NODE:
-//     return ((BVHNode *)obj.ptr)->bbox;
-//   case TRANSLATE:
-//     return ((Translate *)obj.ptr)->bbox;
-//   case ROTATE_Y:
-//     return ((RotateY *)obj.ptr)->bbox;
-//   case CONSTANT_MEDIUM:
-//     return Hittable_bbox(((ConstantMedium *)obj.ptr)->boundary);
-//   default:
-//     assert(false && "Should not reached here");
-//   }
-// }
 
 // for use with qsort()
 typedef int (*Comparator)(const void *, const void *);
@@ -111,7 +84,6 @@ void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat) {
                      AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius))};
 }
 Hittable *Sphere_new(Vec3 center, float radius, Material mat) define_init_new(Sphere, center, radius, mat);
-
 static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                        PCG32State *rng) {
   Sphere *self = (Sphere *)self_;
@@ -315,6 +287,13 @@ static bool Translate_hit(const Hittable *self_, const Ray *ray, float t_min, fl
   return true;
 }
 
+static Vec3 Vec3_rotate_y(Vec3 u, float cos_theta, float sin_theta) {
+  return vec3(cos_theta * u.x - sin_theta * u.z, u.y, sin_theta * u.x + cos_theta * u.z);
+}
+
+static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta) {
+  return vec3(cos_theta * u.x + sin_theta * u.z, u.y, -sin_theta * u.x + cos_theta * u.z);
+}
 static HittableHitFn RotateY_hit;
 static AABB RotateY_bbox(const Hittable *self) { return ((RotateY *)self)->bbox; }
 void RotateY_init(RotateY *self, Hittable *object, float angle) {
@@ -401,12 +380,4 @@ static bool ConstantMedium_hit(const Hittable *self_, const Ray *ray, float t_mi
   rec->p = ray_at(ray, rec->t);
   rec->material = self->phase_fn;
   return true;
-}
-
-static Vec3 Vec3_rotate_y(Vec3 u, float cos_theta, float sin_theta) {
-  return vec3(cos_theta * u.x - sin_theta * u.z, u.y, sin_theta * u.x + cos_theta * u.z);
-}
-
-static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta) {
-  return vec3(cos_theta * u.x + sin_theta * u.z, u.y, -sin_theta * u.x + cos_theta * u.z);
 }
