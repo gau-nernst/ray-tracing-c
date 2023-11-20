@@ -77,7 +77,7 @@ static HittableHitFn HittableList_hit;
 static AABB HittableList_bbox(const Hittable *self_) { return ((HittableList *)self_)->bbox; }
 void HittableList_init(HittableList *self, size_t max_size) {
   *self = (HittableList){
-      {HittableList_hit, HittableList_bbox}, max_size, 0, my_malloc(sizeof(Hittable *) * max_size), AABB_EMPTY};
+      {HittableList_hit, HittableList_bbox}, max_size, 0, my_malloc(sizeof(self->items[0]) * max_size), AABB_EMPTY};
 }
 Hittable *HittableList_new(size_t max_size) define_init_new(HittableList, max_size);
 void HittableList_append(HittableList *self, Hittable *item) {
@@ -244,7 +244,7 @@ static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32State 
     Comparator comparator = (axis == 0)   ? Hittable_compare_bbox_x
                             : (axis == 1) ? Hittable_compare_bbox_y
                                           : Hittable_compare_bbox_z;
-    qsort(list, n, sizeof(Hittable), comparator);
+    qsort(list, n, sizeof(list[0]), comparator);
 
     size_t mid = n / 2;
 
