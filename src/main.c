@@ -326,31 +326,33 @@ int main(int argc, char *argv[]) {
   default:
     fprintf(stderr, "Unsupported option. Default to 0\n");
   case 0:
-    fprintf(stderr, "Book 1\n");
-    // scene_book1_final(&world, &camera);
+    fprintf(stderr, "Book 1: Metal and Lambertian\n");
     scene_metal_and_lambertian(&world, &camera);
     break;
   case 1:
+    fprintf(stderr, "Book 1: Final scene\n");
+    scene_book1_final(&world, &camera);
+  case 2:
     fprintf(stderr, "Book 2: Checker\n");
     scene_checker(&world, &camera);
     break;
-  case 2:
+  case 3:
     fprintf(stderr, "Book 2: Earth\n");
     scene_earth(&world, &camera);
     break;
-  case 3:
+  case 4:
     fprintf(stderr, "Book 2: Perlin noise\n");
     scene_perlin(&world, &camera);
     break;
-  case 4:
+  case 5:
     fprintf(stderr, "Book 2: Simple light\n");
     scene_simple_light(&world, &camera);
     break;
-  case 5:
+  case 6:
     fprintf(stderr, "Book 2: Cornell box\n");
     scene_cornell_box(&world, &camera);
     break;
-  case 6:
+  case 7:
     fprintf(stderr, "Book 2: Final scene\n");
     scene_book2_final(&world, &camera, true);
     break;
