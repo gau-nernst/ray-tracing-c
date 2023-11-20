@@ -35,7 +35,7 @@ void Camera_init(Camera *camera) {
 
 static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
   if (depth <= 0)
-    return (Vec3){0, 0, 0};
+    return VEC3_ZERO;
 
   HitRecord rec;
   if (HittableList_hit(&world->objects, ray, 1e-3f, INFINITY, &rec, rng)) {
@@ -75,7 +75,7 @@ void Camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
 
       Vec3 pixel_pos = vec3_add(camera->pixel00_loc, vec3_mul(camera->pixel_delta_u, (float)i),
                                 vec3_mul(camera->pixel_delta_v, (float)j));
-      Vec3 pixel_color = {0, 0, 0};
+      Vec3 pixel_color = VEC3_ZERO;
 
       for (int sample = 0; sample < camera->samples_per_pixel; sample++) {
         // square sampling
@@ -106,7 +106,7 @@ void Camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
 
       pixel_color = vec3_div(pixel_color, (float)camera->samples_per_pixel);
       for (int c = 0; c < 3; c++)
-        buffer[(j * camera->img_width + i) * 3 + c] = (int)(256.0f * clamp(sqrtf(pixel_color.x[c]), 0.0f, 0.999f));
+        buffer[(j * camera->img_width + i) * 3 + c] = (int)(256.0f * clamp(sqrtf(pixel_color.values[c]), 0.0f, 0.999f));
     }
   }
   fprintf(stderr, "\nDone\n");

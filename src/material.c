@@ -35,7 +35,7 @@ bool scatter(Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Ve
   case ISOTROPIC:
     return Isotropic_scatter(mat.ptr, incident, rec, rng, scattered, color);
   default:
-    *color = (Vec3){0, 0, 0};
+    *color = VEC3_ZERO;
     return false;
   }
 }
@@ -100,6 +100,6 @@ Vec3 emit(HitRecord *rec) {
   case DIFFUSE_LIGHT:
     return DiffuseLight_emit(mat.ptr, rec);
   default:
-    return (Vec3){0, 0, 0};
+    return VEC3_ZERO;
   }
 }
