@@ -1,4 +1,5 @@
 #include "hittable.h"
+#include "pcg32.h"
 #include "vec3.h"
 #include <math.h>
 
@@ -40,69 +41,159 @@ static AABB AABB_pad(AABB bbox) {
   return padded;
 }
 
-static AABB Hittable_bbox(Hittable obj) {
-  switch (obj.type) {
-  case HITTABLE_LIST:
-    return ((HittableList *)obj.ptr)->bbox;
-  case SPHERE:
-    return ((Sphere *)obj.ptr)->bbox;
-  case QUAD:
-    return ((Quad *)obj.ptr)->bbox;
-  case BVH_NODE:
-    return ((BVHNode *)obj.ptr)->bbox;
-  case TRANSLATE:
-    return ((Translate *)obj.ptr)->bbox;
-  case ROTATE_Y:
-    return ((RotateY *)obj.ptr)->bbox;
-  case CONSTANT_MEDIUM:
-    return Hittable_bbox(((ConstantMedium *)obj.ptr)->boundary);
-  default:
-    assert(false && "Should not reached here");
-  }
-}
+// static AABB Hittable_bbox(Hittable obj) {
+//   switch (obj.type) {
+//   case HITTABLE_LIST:
+//     return ((HittableList *)obj.ptr)->bbox;
+//   case SPHERE:
+//     return ((Sphere *)obj.ptr)->bbox;
+//   case QUAD:
+//     return ((Quad *)obj.ptr)->bbox;
+//   case BVH_NODE:
+//     return ((BVHNode *)obj.ptr)->bbox;
+//   case TRANSLATE:
+//     return ((Translate *)obj.ptr)->bbox;
+//   case ROTATE_Y:
+//     return ((RotateY *)obj.ptr)->bbox;
+//   case CONSTANT_MEDIUM:
+//     return Hittable_bbox(((ConstantMedium *)obj.ptr)->boundary);
+//   default:
+//     assert(false && "Should not reached here");
+//   }
+// }
 
 // for use with qsort()
 typedef int (*Comparator)(const void *, const void *);
-static int Hittable_compare_bbox(const Hittable *a, const Hittable *b, int axis) {
-  float a_ = Hittable_bbox(*a).values[axis][0];
-  float b_ = Hittable_bbox(*b).values[axis][0];
+static int Hittable_compare_bbox(const Hittable **a, const Hittable **b, int axis) {
+  float a_ = (*a)->bbox(*a).values[axis][0];
+  float b_ = (*b)->bbox(*b).values[axis][0];
   return (a_ < b_) ? -1 : (a_ > b_) ? 1 : 0;
 }
 static int Hittable_compare_bbox_x(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 0); }
 static int Hittable_compare_bbox_y(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 1); }
 static int Hittable_compare_bbox_z(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 2); }
 
-void HittableList_init(HittableList *list, size_t max_size) {
-  *list = (HittableList){max_size, 0, my_malloc(sizeof(list->items[0]) * max_size), AABB_EMPTY};
+static HittableHitFn HittableList_hit;
+static AABB HittableList_bbox(const Hittable *self_) { return ((HittableList *)self_)->bbox; }
+void HittableList_init(HittableList *self, size_t max_size) {
+  *self = (HittableList){
+      {HittableList_hit, HittableList_bbox}, max_size, 0, my_malloc(sizeof(Hittable *) * max_size), AABB_EMPTY};
 }
-HittableList *HittableList_new(size_t max_size) define_init_new(HittableList, max_size);
-void HittableList_append(HittableList *list, Hittable item) {
-  assert((list->size < list->max_size) && "List is full");
-  list->items[list->size++] = item;
-  list->bbox = AABB_from_AABB(list->bbox, Hittable_bbox(item));
+Hittable *HittableList_new(size_t max_size) define_init_new(HittableList, max_size);
+void HittableList_append(HittableList *self, Hittable *item) {
+  assert((self->size < self->max_size) && "List is full");
+  self->items[self->size++] = item;
+  self->bbox = AABB_from_AABB(self->bbox, item->bbox(item));
+}
+static bool HittableList_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+                             PCG32State *rng) {
+  HittableList *self = (HittableList *)self_;
+  bool hit_anything = false;
+
+  for (int i = 0; i < self->size; i++) {
+    Hittable *item = self->items[i];
+    if (item->hit(item, ray, t_min, t_max, rec, rng)) {
+      t_max = rec->t;
+      hit_anything = true;
+    }
+  }
+
+  return hit_anything;
 }
 
+static HittableHitFn Sphere_hit;
+static AABB Sphere_bbox(const Hittable *self_) { return ((Sphere *)self_)->bbox; }
 void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat) {
-  *sphere = (Sphere){center, radius, mat, AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius))};
+  *sphere = (Sphere){{Sphere_hit, Sphere_bbox},
+                     center,
+                     radius,
+                     mat,
+                     AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius))};
 }
-Sphere *Sphere_new(Vec3 center, float radius, Material mat) define_init_new(Sphere, center, radius, mat);
+Hittable *Sphere_new(Vec3 center, float radius, Material mat) define_init_new(Sphere, center, radius, mat);
 
-void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat) {
-  quad->Q = Q;
-  quad->u = u;
-  quad->v = v;
-  quad->material = mat;
-  quad->bbox = AABB_pad(AABB_from_Vec3(Q, vec3_add(Q, u, v)));
+static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+                       PCG32State *rng) {
+  Sphere *self = (Sphere *)self_;
 
-  Vec3 n = vec3_cross(quad->u, quad->v);
-  quad->normal = vec3_normalize(n);
-  quad->D = vec3_dot(quad->normal, quad->Q);
-  quad->w = vec3_div(n, vec3_length2(n));
+  Vec3 oc = vec3_sub(ray->origin, self->center);
+  float a = vec3_length2(ray->direction);
+  float b = vec3_dot(oc, ray->direction);
+  float c = vec3_length2(oc) - self->radius * self->radius;
+  float disc = b * b - a * c;
+
+  if (disc < 0)
+    return false;
+
+  float disc_sqrt = sqrtf(disc);
+  float root = (-b - disc_sqrt) / a;
+  if (root <= t_min || root >= t_max) {
+    root = (-b + disc_sqrt) / a;
+    if (root <= t_min || root >= t_max)
+      return false;
+  }
+
+  rec->t = root;
+  rec->p = ray_at(ray, root);
+
+  Vec3 outward_normal = vec3_div(vec3_sub(rec->p, self->center), self->radius);
+  rec->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
+  rec->normal = rec->front_face ? outward_normal : vec3_neg(outward_normal);
+  rec->u = (atan2f(-outward_normal.z, outward_normal.x) + (float)M_PI) * (float)M_1_PI * 0.5;
+  rec->v = acosf(-outward_normal.y) * M_1_PI;
+  rec->material = self->material;
+
+  return true;
 }
-Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat) define_init_new(Quad, Q, u, v, mat);
 
-HittableList *Box_new(Vec3 a, Vec3 b, Material mat) {
-  HittableList *list = HittableList_new(6);
+static HittableHitFn Quad_hit;
+static AABB Quad_bbox(const Hittable *self_) { return ((Quad *)self_)->bbox; }
+void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material mat) {
+  self->hittable = (Hittable){Quad_hit, Quad_bbox};
+  self->Q = Q;
+  self->u = u;
+  self->v = v;
+  self->material = mat;
+  self->bbox = AABB_pad(AABB_from_Vec3(Q, vec3_add(Q, u, v)));
+
+  Vec3 n = vec3_cross(self->u, self->v);
+  self->normal = vec3_normalize(n);
+  self->D = vec3_dot(self->normal, self->Q);
+  self->w = vec3_div(n, vec3_length2(n));
+}
+Hittable *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat) define_init_new(Quad, Q, u, v, mat);
+static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng) {
+  Quad *self = (Quad *)self_;
+
+  float denom = vec3_dot(self->normal, ray->direction);
+  if (fabs(denom) < 1e-8f)
+    return false;
+
+  float t = (self->D - vec3_dot(self->normal, ray->origin)) / denom;
+  if ((t < t_min) || (t > t_max))
+    return false;
+
+  Vec3 p = ray_at(ray, t);
+  Vec3 planar_hitpt_vec = vec3_sub(p, self->Q);
+  float alpha = vec3_dot(self->w, vec3_cross(planar_hitpt_vec, self->v));
+  float beta = vec3_dot(self->w, vec3_cross(self->u, planar_hitpt_vec));
+
+  if ((alpha < 0) || (alpha > 1) || (beta < 0) || (beta > 1))
+    return false;
+
+  rec->u = alpha;
+  rec->v = beta;
+  rec->t = t;
+  rec->p = p;
+  rec->material = self->material;
+  rec->front_face = vec3_dot(ray->direction, self->normal) < 0.0f;
+  rec->normal = rec->front_face ? self->normal : vec3_neg(self->normal);
+
+  return true;
+}
+
+Hittable *Box_new(Vec3 a, Vec3 b, Material mat) {
+  HittableList *list = (HittableList *)HittableList_new(6);
 
   Vec3 min_p = vec3_min(a, b);
   Vec3 max_p = vec3_max(a, b);
@@ -111,104 +202,63 @@ HittableList *Box_new(Vec3 a, Vec3 b, Material mat) {
   Vec3 dy = vec3(0, max_p.y - min_p.y, 0);
   Vec3 dz = vec3(0, 0, max_p.z - min_p.z);
 
-  HittableList_append(list, hittable(Quad_new(vec3(min_p.x, min_p.y, max_p.z), dx, dy, mat)));           // front
-  HittableList_append(list, hittable(Quad_new(vec3(max_p.x, min_p.y, max_p.z), vec3_neg(dz), dy, mat))); // right
-  HittableList_append(list, hittable(Quad_new(vec3(max_p.x, min_p.y, min_p.z), vec3_neg(dx), dy, mat))); // back
-  HittableList_append(list, hittable(Quad_new(vec3(min_p.x, min_p.y, min_p.z), dz, dy, mat)));           // left
-  HittableList_append(list, hittable(Quad_new(vec3(min_p.x, max_p.y, max_p.z), dx, vec3_neg(dz), mat))); // top
-  HittableList_append(list, hittable(Quad_new(vec3(min_p.x, min_p.y, min_p.z), dx, dz, mat)));           // bottom
+  HittableList_append(list, Quad_new(vec3(min_p.x, min_p.y, max_p.z), dx, dy, mat));           // front
+  HittableList_append(list, Quad_new(vec3(max_p.x, min_p.y, max_p.z), vec3_neg(dz), dy, mat)); // right
+  HittableList_append(list, Quad_new(vec3(max_p.x, min_p.y, min_p.z), vec3_neg(dx), dy, mat)); // back
+  HittableList_append(list, Quad_new(vec3(min_p.x, min_p.y, min_p.z), dz, dy, mat));           // left
+  HittableList_append(list, Quad_new(vec3(min_p.x, max_p.y, max_p.z), dx, vec3_neg(dz), mat)); // top
+  HittableList_append(list, Quad_new(vec3(min_p.x, min_p.y, min_p.z), dx, dz, mat));           // bottom
 
-  return list;
+  return (Hittable *)list;
 }
 
-static void _BVHNode_init(BVHNode *bvh, const Hittable *list, size_t n, PCG32State *rng) {
+static HittableHitFn BVHNode_hit;
+static AABB BVHNode_bbox(const Hittable *self_) { return ((BVHNode *)self_)->bbox; }
+static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32State *rng);
+void BVHNode_init(BVHNode *self, const HittableList *list, PCG32State *rng) {
+  _BVHNode_init(self, list->items, list->size, rng);
+}
+Hittable *BVHNode_new(const HittableList *list, PCG32State *rng) define_init_new(BVHNode, list, rng);
+static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32State *rng) {
+  self->hittable = (Hittable){BVHNode_hit, BVHNode_bbox};
+
   // make a copy
-  Hittable *list_ = my_malloc(sizeof(Hittable) * n);
+  Hittable **list = my_malloc(sizeof(Hittable *) * n);
   for (int i = 0; i < n; i++)
-    list_[i] = list[i];
+    list[i] = list_[i];
 
   int axis = pcg32_u32_between(rng, 0, 3);
 
   if (n == 1) {
-    bvh->left = list_[0];
-    bvh->right = list_[0];
+    self->left = list[0];
+    self->right = list[0];
   } else if (n == 2) {
-    if (Hittable_compare_bbox(list_, list_ + 1, axis) < 0) {
-      bvh->left = list_[0];
-      bvh->right = list_[1];
+    if (Hittable_compare_bbox(list, list + 1, axis) < 0) {
+      self->left = list[0];
+      self->right = list[1];
     } else {
-      bvh->left = list_[1];
-      bvh->right = list_[0];
+      self->left = list[1];
+      self->right = list[0];
     }
   } else {
     Comparator comparator = (axis == 0)   ? Hittable_compare_bbox_x
                             : (axis == 1) ? Hittable_compare_bbox_y
                                           : Hittable_compare_bbox_z;
-    qsort(list_, n, sizeof(Hittable), comparator);
+    qsort(list, n, sizeof(Hittable), comparator);
 
     size_t mid = n / 2;
-    // bvh->left = hittable(BVHNode_new(list_, mid, rng));
-    // bvh->right = hittable(BVHNode_new(list_ + mid, n - mid, rng));
 
     BVHNode *left = my_malloc(sizeof(BVHNode));
-    _BVHNode_init(left, list_, mid, rng);
-    bvh->left = hittable(left);
+    _BVHNode_init(left, list, mid, rng);
+    self->left = (Hittable *)left;
 
     BVHNode *right = my_malloc(sizeof(BVHNode));
-    _BVHNode_init(right, list_ + mid, n - mid, rng);
-    bvh->right = hittable(right);
+    _BVHNode_init(right, list + mid, n - mid, rng);
+    self->right = (Hittable *)right;
   }
-  free(list_); // we don't need this anymore
-  bvh->bbox = AABB_from_AABB(Hittable_bbox(bvh->left), Hittable_bbox(bvh->right));
+  free(list); // we don't need this anymore
+  self->bbox = AABB_from_AABB(self->left->bbox(self->left), self->right->bbox(self->right));
 }
-void BVHNode_init(BVHNode *bvh, const HittableList *list, PCG32State *rng) {
-  _BVHNode_init(bvh, list->items, list->size, rng);
-}
-BVHNode *BVHNode_new(const HittableList *list, PCG32State *rng) define_init_new(BVHNode, list, rng);
-
-void Translate_init(Translate *translate, Hittable object, Vec3 offset) {
-  AABB bbox = Hittable_bbox(object);
-  for (int i = 0; i < 3; i++) {
-    bbox.values[i][0] += offset.values[i];
-    bbox.values[i][1] += offset.values[i];
-  }
-  *translate = (Translate){object, offset, bbox};
-}
-Translate *Translate_new(Hittable object, Vec3 offset) define_init_new(Translate, object, offset);
-
-void RotateY_init(RotateY *rotate_y, Hittable object, float angle) {
-  angle = angle * (float)M_PI / 180.f;
-  float sin_theta = sinf(angle);
-  float cos_theta = cosf(angle);
-
-  AABB bbox = Hittable_bbox(object);
-  Vec3 min_p = vec3(INFINITY, INFINITY, INFINITY);
-  Vec3 max_p = vec3(-INFINITY, -INFINITY, -INFINITY);
-  for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 2; j++)
-      for (int k = 0; k < 2; k++) {
-        Vec3 tester =
-            vec3((float)i * bbox.x[1] + (float)(1 - i) * bbox.x[0], (float)j * bbox.y[1] + (float)(1 - j) * bbox.y[0],
-                 (float)k * bbox.z[1] + (float)(1 - k) * bbox.z[0]);
-        tester = Vec3_rotate_y_inverse(tester, cos_theta, sin_theta);
-        min_p = vec3_min(min_p, tester);
-        max_p = vec3_max(max_p, tester);
-      }
-
-  *rotate_y = (RotateY){object, sin_theta, cos_theta, AABB_from_Vec3(min_p, max_p)};
-}
-RotateY *RotateY_new(Hittable object, float angle) define_init_new(RotateY, object, angle);
-
-void ConstantMedium_init(ConstantMedium *self, Hittable boundary, float density, Texture *albedo) {
-  *self = (ConstantMedium){
-      boundary,
-      -1.0f / density,
-      material(Isotropic_new(albedo)),
-  };
-}
-ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture *albedo)
-    define_init_new(ConstantMedium, boundary, density, albedo);
-
 static bool AABB_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
   for (int i = 0; i < 3; i++) {
     float invD = 1.0f / ray->direction.values[i];
@@ -227,162 +277,108 @@ static bool AABB_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max)
   }
   return true;
 }
-
-static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *rec);
-static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *rec);
-static bool BVHNode_hit(const BVHNode *bvh, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng);
-static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                          PCG32State *rng);
-static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                        PCG32State *rng);
-static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray *ray, float t_min, float t_max,
-                               HitRecord *rec, PCG32State *rng);
-
-bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng) {
-  switch (obj.type) {
-  case HITTABLE_LIST:
-    return HittableList_hit(obj.ptr, ray, t_min, t_max, rec, rng);
-  case SPHERE:
-    return Sphere_hit(obj.ptr, ray, t_min, t_max, rec);
-  case QUAD:
-    return Quad_hit(obj.ptr, ray, t_min, t_max, rec);
-  case BVH_NODE:
-    return BVHNode_hit(obj.ptr, ray, t_min, t_max, rec, rng);
-  case TRANSLATE:
-    return Translate_hit(obj.ptr, ray, t_min, t_max, rec, rng);
-  case ROTATE_Y:
-    return RotateY_hit(obj.ptr, ray, t_min, t_max, rec, rng);
-  case CONSTANT_MEDIUM:
-    return ConstantMedium_hit(obj.ptr, ray, t_min, t_max, rec, rng);
-  }
-}
-
-bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                      PCG32State *rng) {
-  bool hit_anything = false;
-
-  for (int i = 0; i < list->size; i++)
-    if (Hittable_hit(list->items[i], ray, t_min, t_max, rec, rng)) {
-      t_max = rec->t;
-      hit_anything = true;
-    }
-
-  return hit_anything;
-}
-
-static bool Sphere_hit(const Sphere *sphere, const Ray *ray, float t_min, float t_max, HitRecord *rec) {
-  Vec3 oc = vec3_sub(ray->origin, sphere->center);
-  float a = vec3_length2(ray->direction);
-  float b = vec3_dot(oc, ray->direction);
-  float c = vec3_length2(oc) - sphere->radius * sphere->radius;
-  float disc = b * b - a * c;
-
-  if (disc < 0)
-    return false;
-
-  float disc_sqrt = sqrtf(disc);
-  float root = (-b - disc_sqrt) / a;
-  if (root <= t_min || root >= t_max) {
-    root = (-b + disc_sqrt) / a;
-    if (root <= t_min || root >= t_max)
-      return false;
-  }
-
-  rec->t = root;
-  rec->p = ray_at(ray, root);
-
-  Vec3 outward_normal = vec3_div(vec3_sub(rec->p, sphere->center), sphere->radius);
-  rec->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
-  rec->normal = rec->front_face ? outward_normal : vec3_neg(outward_normal);
-  rec->u = (atan2f(-outward_normal.z, outward_normal.x) + (float)M_PI) * (float)M_1_PI * 0.5;
-  rec->v = acosf(-outward_normal.y) * M_1_PI;
-  rec->material = sphere->material;
-
-  return true;
-}
-
-static bool Quad_hit(const Quad *quad, const Ray *ray, float t_min, float t_max, HitRecord *rec) {
-  float denom = vec3_dot(quad->normal, ray->direction);
-  if (fabs(denom) < 1e-8f)
-    return false;
-
-  float t = (quad->D - vec3_dot(quad->normal, ray->origin)) / denom;
-  if ((t < t_min) || (t > t_max))
-    return false;
-
-  Vec3 p = ray_at(ray, t);
-  Vec3 planar_hitpt_vec = vec3_sub(p, quad->Q);
-  float alpha = vec3_dot(quad->w, vec3_cross(planar_hitpt_vec, quad->v));
-  float beta = vec3_dot(quad->w, vec3_cross(quad->u, planar_hitpt_vec));
-
-  if ((alpha < 0) || (alpha > 1) || (beta < 0) || (beta > 1))
-    return false;
-
-  rec->u = alpha;
-  rec->v = beta;
-  rec->t = t;
-  rec->p = p;
-  rec->material = quad->material;
-  rec->front_face = vec3_dot(ray->direction, quad->normal) < 0.0f;
-  rec->normal = rec->front_face ? quad->normal : vec3_neg(quad->normal);
-
-  return true;
-}
-
-static bool BVHNode_hit(const BVHNode *bvh, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng) {
-  if (!AABB_hit(&bvh->bbox, ray, t_min, t_max))
+static bool BVHNode_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+                        PCG32State *rng) {
+  BVHNode *self = (BVHNode *)self_;
+  if (!AABB_hit(&self->bbox, ray, t_min, t_max))
     return false;
 
   // NOTE: we need to check for both left and right, since we don't know which one is closer.
-  bool hit_left = Hittable_hit(bvh->left, ray, t_min, t_max, rec, rng);
+  bool hit_left = self->left->hit(self->left, ray, t_min, t_max, rec, rng);
   if (hit_left)
     t_max = rec->t;
-  bool hit_right = Hittable_hit(bvh->right, ray, t_min, t_max, rec, rng);
+  bool hit_right = self->right->hit(self->right, ray, t_min, t_max, rec, rng);
   return hit_left || hit_right;
 }
 
-static bool Translate_hit(const Translate *translate, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+static HittableHitFn Translate_hit;
+static AABB Translate_bbox(const Hittable *self) { return ((Translate *)self)->bbox; }
+void Translate_init(Translate *self, Hittable *object, Vec3 offset) {
+  AABB bbox = object->bbox(object);
+  for (int i = 0; i < 2; i++) {
+    bbox.x[i] += offset.x;
+    bbox.y[i] += offset.y;
+    bbox.z[i] += offset.z;
+  }
+  *self = (Translate){{Translate_hit, Translate_bbox}, object, offset, bbox};
+}
+Hittable *Translate_new(Hittable *object, Vec3 offset) define_init_new(Translate, object, offset);
+static bool Translate_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                           PCG32State *rng) {
-  Ray offset_r = {vec3_sub(ray->origin, translate->offset), ray->direction};
+  Translate *self = (Translate *)self_;
+  Ray offset_r = {vec3_sub(ray->origin, self->offset), ray->direction};
 
-  if (!Hittable_hit(translate->object, &offset_r, t_min, t_max, rec, rng))
+  if (!self->object->hit(self->object, &offset_r, t_min, t_max, rec, rng))
     return false;
 
-  rec->p = vec3_add(rec->p, translate->offset);
+  rec->p = vec3_add(rec->p, self->offset);
   return true;
 }
 
-static Vec3 Vec3_rotate_y(Vec3 u, float cos_theta, float sin_theta) {
-  return vec3(cos_theta * u.x - sin_theta * u.z, u.y, sin_theta * u.x + cos_theta * u.z);
-}
+static HittableHitFn RotateY_hit;
+static AABB RotateY_bbox(const Hittable *self) { return ((RotateY *)self)->bbox; }
+void RotateY_init(RotateY *self, Hittable *object, float angle) {
+  angle = angle * (float)M_PI / 180.f;
+  float sin_theta = sinf(angle);
+  float cos_theta = cosf(angle);
 
-static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta) {
-  return vec3(cos_theta * u.x + sin_theta * u.z, u.y, -sin_theta * u.x + cos_theta * u.z);
-}
+  AABB bbox = object->bbox(object);
+  Vec3 min_p = vec3(INFINITY, INFINITY, INFINITY);
+  Vec3 max_p = vec3(-INFINITY, -INFINITY, -INFINITY);
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++)
+      for (int k = 0; k < 2; k++) {
+        Vec3 tester =
+            vec3((float)i * bbox.x[1] + (float)(1 - i) * bbox.x[0], (float)j * bbox.y[1] + (float)(1 - j) * bbox.y[0],
+                 (float)k * bbox.z[1] + (float)(1 - k) * bbox.z[0]);
+        tester = Vec3_rotate_y_inverse(tester, cos_theta, sin_theta);
+        min_p = vec3_min(min_p, tester);
+        max_p = vec3_max(max_p, tester);
+      }
 
-static bool RotateY_hit(const RotateY *rotate_y, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+  *self = (RotateY){{RotateY_hit, RotateY_bbox}, object, sin_theta, cos_theta, AABB_from_Vec3(min_p, max_p)};
+}
+Hittable *RotateY_new(Hittable *object, float angle) define_init_new(RotateY, object, angle);
+static bool RotateY_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                         PCG32State *rng) {
+  RotateY *self = (RotateY *)self_;
   Ray rotated_r = {
-      Vec3_rotate_y(ray->origin, rotate_y->cos_theta, rotate_y->sin_theta),
-      Vec3_rotate_y(ray->direction, rotate_y->cos_theta, rotate_y->sin_theta),
+      Vec3_rotate_y(ray->origin, self->cos_theta, self->sin_theta),
+      Vec3_rotate_y(ray->direction, self->cos_theta, self->sin_theta),
   };
 
-  if (!Hittable_hit(rotate_y->object, &rotated_r, t_min, t_max, rec, rng))
+  if (!self->object->hit(self->object, &rotated_r, t_min, t_max, rec, rng))
     return false;
 
-  rec->p = Vec3_rotate_y_inverse(rec->p, rotate_y->cos_theta, rotate_y->sin_theta);
-  rec->normal = Vec3_rotate_y_inverse(rec->normal, rotate_y->cos_theta, rotate_y->sin_theta);
+  rec->p = Vec3_rotate_y_inverse(rec->p, self->cos_theta, self->sin_theta);
+  rec->normal = Vec3_rotate_y_inverse(rec->normal, self->cos_theta, self->sin_theta);
   return true;
 }
 
-static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray *ray, float t_min, float t_max,
-                               HitRecord *rec, PCG32State *rng) {
+static HittableHitFn ConstantMedium_hit;
+static AABB ConstantMedium_bbox(const Hittable *self) {
+  Hittable *boundary = ((ConstantMedium *)self)->boundary;
+  return boundary->bbox(boundary);
+}
+void ConstantMedium_init(ConstantMedium *self, Hittable *boundary, float density, Texture *albedo) {
+  *self = (ConstantMedium){
+      {ConstantMedium_hit, ConstantMedium_bbox},
+      boundary,
+      -1.0f / density,
+      material(Isotropic_new(albedo)),
+  };
+}
+Hittable *ConstantMedium_new(Hittable *boundary, float density, Texture *albedo)
+    define_init_new(ConstantMedium, boundary, density, albedo);
+static bool ConstantMedium_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+                               PCG32State *rng) {
+  ConstantMedium *self = (ConstantMedium *)self_;
   HitRecord rec1, rec2;
 
-  if (!Hittable_hit(constant_medium->boundary, ray, -INFINITY, INFINITY, &rec1, rng))
+  if (!self->boundary->hit(self->boundary, ray, -INFINITY, INFINITY, &rec1, rng))
     return false;
 
-  if (!Hittable_hit(constant_medium->boundary, ray, rec1.t + 0.0001f, INFINITY, &rec2, rng))
+  if (!self->boundary->hit(self->boundary, ray, rec1.t + 0.0001f, INFINITY, &rec2, rng))
     return false;
 
   rec1.t = fmaxf(rec1.t, t_min);
@@ -395,7 +391,7 @@ static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray 
 
   float ray_length = vec3_length(ray->direction);
   float distance_inside_boundary = (rec2.t - rec1.t) * ray_length;
-  float hit_distance = constant_medium->neg_inv_density * logf(pcg32_f32(rng));
+  float hit_distance = self->neg_inv_density * logf(pcg32_f32(rng));
 
   if (hit_distance > distance_inside_boundary)
     return false;
@@ -403,6 +399,14 @@ static bool ConstantMedium_hit(const ConstantMedium *constant_medium, const Ray 
   // NOTE: we don't need to set normal and front_face, since Isotropic doesn't use them
   rec->t = rec1.t + hit_distance / ray_length;
   rec->p = ray_at(ray, rec->t);
-  rec->material = constant_medium->phase_fn;
+  rec->material = self->phase_fn;
   return true;
+}
+
+static Vec3 Vec3_rotate_y(Vec3 u, float cos_theta, float sin_theta) {
+  return vec3(cos_theta * u.x - sin_theta * u.z, u.y, sin_theta * u.x + cos_theta * u.z);
+}
+
+static Vec3 Vec3_rotate_y_inverse(Vec3 u, float cos_theta, float sin_theta) {
+  return vec3(cos_theta * u.x + sin_theta * u.z, u.y, -sin_theta * u.x + cos_theta * u.z);
 }

@@ -5,10 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 
-static Vec3 Solid_value(Texture *self_, float u, float v, Vec3 p) {
-  Solid *self = (Solid *)self_;
-  return self->color;
-}
+static Vec3 Solid_value(Texture *self_, float u, float v, Vec3 p) { return ((Solid *)self_)->color; }
 void Solid_init(Solid *self, Vec3 color) { *self = (Solid){{Solid_value}, color}; }
 Texture *Solid_new(Vec3 color) define_init_new(Solid, color);
 

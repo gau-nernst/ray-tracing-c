@@ -38,7 +38,8 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     return VEC3_ZERO;
 
   HitRecord rec;
-  if (HittableList_hit(&world->objects, ray, 1e-3f, INFINITY, &rec, rng)) {
+  Hittable *hittable = (Hittable *)&world->objects;
+  if (hittable->hit(hittable, ray, 1e-3f, INFINITY, &rec, rng)) {
     Ray new_ray;
     new_ray.origin = rec.p;
     Vec3 scatter_color;

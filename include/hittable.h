@@ -21,60 +21,71 @@ typedef union AABB {
   float values[3][2];
 } AABB;
 
-typedef enum HittableType {
-  HITTABLE_LIST,
-  SPHERE,
-  QUAD,
-  BVH_NODE,
-  TRANSLATE,
-  ROTATE_Y,
-  CONSTANT_MEDIUM,
-} HittableType;
+// typedef enum HittableType {
+//   HITTABLE_LIST,
+//   SPHERE,
+//   QUAD,
+//   BVH_NODE,
+//   TRANSLATE,
+//   ROTATE_Y,
+//   CONSTANT_MEDIUM,
+// } HittableType;
 
-typedef struct Hittable {
-  HittableType type;
-  void *ptr;
-} Hittable;
+// typedef struct Hittable {
+//   HittableType type;
+//   void *ptr;
+// } Hittable;
 
-#define hittable(ptr)                                                                                                  \
-  (Hittable) {                                                                                                         \
-    _Generic((ptr),                                                                                                    \
-        HittableList *: HITTABLE_LIST,                                                                                 \
-        Sphere *: SPHERE,                                                                                              \
-        Quad *: QUAD,                                                                                                  \
-        BVHNode *: BVH_NODE,                                                                                           \
-        Translate *: TRANSLATE,                                                                                        \
-        RotateY *: ROTATE_Y,                                                                                           \
-        ConstantMedium *: CONSTANT_MEDIUM),                                                                            \
-        ptr                                                                                                            \
-  }
+// #define hittable(ptr)                                                                                                  \
+//   (Hittable) {                                                                                                         \
+//     _Generic((ptr),                                                                                                    \
+//         HittableList *: HITTABLE_LIST,                                                                                 \
+//         Sphere *: SPHERE,                                                                                              \
+//         Quad *: QUAD,                                                                                                  \
+//         BVHNode *: BVH_NODE,                                                                                           \
+//         Translate *: TRANSLATE,                                                                                        \
+//         RotateY *: ROTATE_Y,                                                                                           \
+//         ConstantMedium *: CONSTANT_MEDIUM),                                                                            \
+//         ptr                                                                                                            \
+//   }
+
+typedef struct Hittable Hittable;
+typedef bool HittableHitFn(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+                           PCG32State *rng);
+struct Hittable {
+  HittableHitFn *hit;
+  AABB (*bbox)(const Hittable *self);
+};
 
 typedef struct HittableList {
+  Hittable hittable;
   size_t max_size;
   size_t size;
-  Hittable *items;
+  Hittable **items;
   AABB bbox;
 } HittableList;
 
-void HittableList_init(HittableList *list, size_t max_size);
-HittableList *HittableList_new(size_t max_size);
-void HittableList_append(HittableList *list, Hittable item);
+void HittableList_init(HittableList *self, size_t max_size);
+Hittable *HittableList_new(size_t max_size);
+void HittableList_append(HittableList *self, Hittable *item);
 
-bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng);
-bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                      PCG32State *rng);
+// bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng);
+// bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+//                       PCG32State *rng);
 
 typedef struct Sphere {
+  Hittable hittable;
   Vec3 center;
   float radius;
   Material material;
   AABB bbox;
 } Sphere;
 
-void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat);
-Sphere *Sphere_new(Vec3 center, float radius, Material mat);
+void Sphere_init(Sphere *self, Vec3 center, float radius, Material mat);
+Hittable *Sphere_new(Vec3 center, float radius, Material mat);
 
 typedef struct Quad {
+  Hittable hittable;
   Vec3 Q;
   Vec3 u;
   Vec3 v;
@@ -85,46 +96,49 @@ typedef struct Quad {
   AABB bbox;
 } Quad;
 
-void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat);
-Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat);
-
-HittableList *Box_new(Vec3 a, Vec3 b, Material mat);
+void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material mat);
+Hittable *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat);
+Hittable *Box_new(Vec3 a, Vec3 b, Material mat);
 
 typedef struct BVHNode {
-  Hittable left;
-  Hittable right;
+  Hittable hittable;
+  Hittable *left;
+  Hittable *right;
   AABB bbox;
 } BVHNode;
 
-void BVHNode_init(BVHNode *bvh, const HittableList *list, PCG32State *rng);
-BVHNode *BVHNode_new(const HittableList *list, PCG32State *rng);
+void BVHNode_init(BVHNode *self, const HittableList *list, PCG32State *rng);
+Hittable *BVHNode_new(const HittableList *list, PCG32State *rng);
 
 typedef struct Translate {
-  Hittable object;
+  Hittable hittable;
+  Hittable *object;
   Vec3 offset;
   AABB bbox;
 } Translate;
 
-void Translate_init(Translate *translate, Hittable object, Vec3 offset);
-Translate *Translate_new(Hittable object, Vec3 offset);
+void Translate_init(Translate *self, Hittable *object, Vec3 offset);
+Hittable *Translate_new(Hittable *object, Vec3 offset);
 
 typedef struct RotateY {
-  Hittable object;
+  Hittable hittable;
+  Hittable *object;
   float sin_theta;
   float cos_theta;
   AABB bbox;
 } RotateY;
 
-void RotateY_init(RotateY *rotate_y, Hittable object, float angle);
-RotateY *RotateY_new(Hittable object, float angle);
+void RotateY_init(RotateY *self, Hittable *object, float angle);
+Hittable *RotateY_new(Hittable *object, float angle);
 
 typedef struct ConstantMedium {
-  Hittable boundary;
+  Hittable hittable;
+  Hittable *boundary;
   float neg_inv_density;
   Material phase_fn;
 } ConstantMedium;
 
-void ConstantMedium_init(ConstantMedium *self, Hittable boundary, float density, Texture *albedo);
-ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture *albedo);
+void ConstantMedium_init(ConstantMedium *self, Hittable *boundary, float density, Texture *albedo);
+Hittable *ConstantMedium_new(Hittable *boundary, float density, Texture *albedo);
 
 #endif // HITTABLE_H

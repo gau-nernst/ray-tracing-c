@@ -10,19 +10,19 @@ void scene_metal_and_lambertian(World *world, Camera *camera) {
 
   mat = material(Lambertian_new(Solid_new(vec3(0.8, 0.8, 0.0))));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, -100.5, -1), 100, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, -100.5, -1), 100, mat));
 
   mat = material(Lambertian_new(Solid_new(vec3(0.7, 0.3, 0.3))));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, 0, -1), 0.5, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, 0, -1), 0.5, mat));
 
   mat = material(Metal_new(Solid_new(vec3(0.8, 0.8, 0.8)), 0.3));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(-1, 0, -1), 0.5, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(-1, 0, -1), 0.5, mat));
 
   mat = material(Metal_new(Solid_new(vec3(0.8, 0.6, 0.2)), 1.0));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(1, 0, -1), 0.5, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(1, 0, -1), 0.5, mat));
 
   camera->vfov = 90.0f;
   camera->background = vec3(0.7, 0.8, 1);
@@ -38,19 +38,19 @@ void scene_book1_final(World *world, Camera *camera) {
 
   mat = material(Lambertian_new(Solid_new(vec3(0.5, 0.5, 0.5))));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, -1000, -1), 1000, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, -1), 1000, mat));
 
   mat = material(Dielectric_new(Solid_new(vec3(1, 1, 1)), 1.5));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, 1, 0), 1, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, 1, 0), 1, mat));
 
   mat = material(Lambertian_new(Solid_new(vec3(0.4, 0.2, 0.1))));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(-4, 1, 0), 1, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(-4, 1, 0), 1, mat));
 
   mat = material(Metal_new(Solid_new(vec3(0.7, 0.6, 0.5)), 0));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(4, 1, 0), 1, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(4, 1, 0), 1, mat));
 
   PCG32State rng;
   pcg32_seed(&rng, 19, 29);
@@ -78,14 +78,14 @@ void scene_book1_final(World *world, Camera *camera) {
         }
 
         MaterialList_append(&world->materials, mat);
-        HittableList_append(&world->objects, hittable(Sphere_new(center, radius, mat)));
+        HittableList_append(&world->objects, Sphere_new(center, radius, mat));
       }
     }
 
-  BVHNode *bvh = BVHNode_new(&world->objects, &rng);
+  Hittable *bvh = BVHNode_new(&world->objects, &rng);
   free(world->objects.items);
   HittableList_init(&world->objects, 1);
-  HittableList_append(&world->objects, hittable(bvh));
+  HittableList_append(&world->objects, bvh);
 
   camera->vfov = 20.0f;
   camera->background = vec3(0.7, 0.8, 1);
@@ -101,8 +101,8 @@ void scene_checker(World *world, Camera *camera) {
   Material mat = material(Lambertian_new(checker_p));
   MaterialList_append(&world->materials, mat);
 
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, -10, 0), 10, mat)));
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, 10, 0), 10, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, -10, 0), 10, mat));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, 10, 0), 10, mat));
 
   camera->vfov = 20.0f;
   camera->background = vec3(0.7, 0.8, 1);
@@ -115,7 +115,7 @@ void scene_earth(World *world, Camera *camera) {
 
   Material mat = material(Lambertian_new(Image_new("earthmap.jpg")));
   MaterialList_append(&world->materials, mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(VEC3_ZERO, 2, mat)));
+  HittableList_append(&world->objects, Sphere_new(VEC3_ZERO, 2, mat));
 
   camera->vfov = 20.0f;
   camera->background = vec3(0.7, 0.8, 1);
@@ -132,8 +132,8 @@ void scene_perlin(World *world, Camera *camera) {
   Material mat = material(Lambertian_new(Perlin_new(4.0f, 7, &rng)));
   MaterialList_append(&world->materials, mat);
 
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, -1000, 0), 1000, mat)));
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, 2, 0), 2, mat)));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, 0), 1000, mat));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, 2, 0), 2, mat));
 
   camera->vfov = 20.0f;
   camera->background = vec3(0.7, 0.8, 1);
@@ -155,10 +155,10 @@ void scene_simple_light(World *world, Camera *camera) {
   MaterialList_append(&world->materials, perlin);
   MaterialList_append(&world->materials, light);
 
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, -1000, 0), 1000, perlin)));
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, 2, 0), 2, perlin)));
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, 7, 0), 2, light)));
-  HittableList_append(&world->objects, hittable(Quad_new(vec3(3, 1, -2), vec3(2, 0, 0), vec3(0, 2, 0), light)));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, 0), 1000, perlin));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, 2, 0), 2, perlin));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, 7, 0), 2, light));
+  HittableList_append(&world->objects, Quad_new(vec3(3, 1, -2), vec3(2, 0, 0), vec3(0, 2, 0), light));
 
   camera->vfov = 20.0f;
   camera->background = VEC3_ZERO;
@@ -179,23 +179,21 @@ void scene_cornell_box(World *world, Camera *camera) {
   MaterialList_append(&world->materials, green);
   MaterialList_append(&world->materials, light);
 
-  HittableList_append(&world->objects, hittable(Quad_new(vec3(555, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), green)));
-  HittableList_append(&world->objects, hittable(Quad_new(vec3(0, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), red)));
-  HittableList_append(&world->objects,
-                      hittable(Quad_new(vec3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), light)));
-  HittableList_append(&world->objects, hittable(Quad_new(vec3(0, 0, 0), vec3(555, 0, 0), vec3(0, 0, 555), white)));
-  HittableList_append(&world->objects,
-                      hittable(Quad_new(vec3(555, 555, 555), vec3(-555, 0, 0), vec3(0, 0, -555), white)));
-  HittableList_append(&world->objects, hittable(Quad_new(vec3(0, 0, 555), vec3(555, 0, 0), vec3(0, 555, 0), white)));
+  HittableList_append(&world->objects, Quad_new(vec3(555, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), green));
+  HittableList_append(&world->objects, Quad_new(vec3(0, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), red));
+  HittableList_append(&world->objects, Quad_new(vec3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), light));
+  HittableList_append(&world->objects, Quad_new(vec3(0, 0, 0), vec3(555, 0, 0), vec3(0, 0, 555), white));
+  HittableList_append(&world->objects, Quad_new(vec3(555, 555, 555), vec3(-555, 0, 0), vec3(0, 0, -555), white));
+  HittableList_append(&world->objects, Quad_new(vec3(0, 0, 555), vec3(555, 0, 0), vec3(0, 555, 0), white));
 
-  Hittable box1 = hittable(Box_new(vec3(0, 0, 0), vec3(165, 330, 165), white));
-  box1 = hittable(RotateY_new(box1, 15));
-  box1 = hittable(Translate_new(box1, vec3(265, 0, 295)));
+  Hittable *box1 = Box_new(vec3(0, 0, 0), vec3(165, 330, 165), white);
+  box1 = RotateY_new(box1, 15);
+  box1 = Translate_new(box1, vec3(265, 0, 295));
   HittableList_append(&world->objects, box1);
 
-  Hittable box2 = hittable(Box_new(vec3(0, 0, 0), vec3(165, 165, 165), white));
-  box2 = hittable(RotateY_new(box2, -18));
-  box2 = hittable(Translate_new(box2, vec3(130, 0, 65)));
+  Hittable *box2 = Box_new(vec3(0, 0, 0), vec3(165, 165, 165), white);
+  box2 = RotateY_new(box2, -18);
+  box2 = Translate_new(box2, vec3(130, 0, 65));
   HittableList_append(&world->objects, box2);
 
   camera->aspect_ratio = 1.0f;
@@ -215,79 +213,78 @@ void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   MaterialList_append(&world->materials, ground);
 
   int boxes_per_side = 20;
-  HittableList *boxes1_list = HittableList_new(boxes_per_side * boxes_per_side);
+  HittableList *boxes1_list = (HittableList *)HittableList_new(boxes_per_side * boxes_per_side);
   for (int i = 0; i < boxes_per_side; i++)
     for (int j = 0; j < boxes_per_side; j++) {
       float w = 100.0f;
       Vec3 p0 = vec3(-1000.0f + i * w, 0.0f, -1000.0f + j * w);
       Vec3 p1 = vec3(-1000.0f + (i + 1) * w, pcg32_f32_between(&rng, 1, 101), -1000.0f + (j + 1) * w);
-      HittableList_append(boxes1_list, hittable(Box_new(p0, p1, ground)));
+      HittableList_append(boxes1_list, Box_new(p0, p1, ground));
     }
 
-  Hittable boxes1;
+  Hittable *boxes1;
   if (enable_bvh) {
-    boxes1 = hittable(BVHNode_new(boxes1_list, &rng));
+    boxes1 = BVHNode_new(boxes1_list, &rng);
     free(boxes1_list->items);
     free(boxes1_list);
   } else
-    boxes1 = hittable(boxes1_list);
+    boxes1 = (Hittable *)boxes1_list;
   HittableList_append(&world->objects, boxes1);
 
   Material light = material(DiffuseLight_new(Solid_new(vec3(7, 7, 7))));
   MaterialList_append(&world->materials, light);
-  HittableList_append(&world->objects,
-                      hittable(Quad_new(vec3(123, 554, 147), vec3(300, 0, 0), vec3(0, 0, 265), light)));
+  HittableList_append(&world->objects, Quad_new(vec3(123, 554, 147), vec3(300, 0, 0), vec3(0, 0, 265), light));
 
   Vec3 center1 = vec3(400, 400, 200);
   // Vec3 center2 = {430, 400, 200}; // TODO: moving sphere
   Material sphere_mat = material(Lambertian_new(Solid_new(vec3(0.7, 0.3, 0.1))));
   MaterialList_append(&world->materials, sphere_mat);
-  HittableList_append(&world->objects, hittable(Sphere_new(center1, 50, sphere_mat)));
+  HittableList_append(&world->objects, Sphere_new(center1, 50, sphere_mat));
 
   Material glass = material(Dielectric_new(Solid_new(vec3(1, 1, 1)), 1.5));
   MaterialList_append(&world->materials, glass);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(260, 150, 45), 50, glass)));
+  HittableList_append(&world->objects, Sphere_new(vec3(260, 150, 45), 50, glass));
 
   Material metal = material(Metal_new(Solid_new(vec3(0.8, 0.8, 0.9)), 1.0));
   MaterialList_append(&world->materials, metal);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(0, 150, 145), 50, metal)));
+  HittableList_append(&world->objects, Sphere_new(vec3(0, 150, 145), 50, metal));
 
   // subsurface material
-  Hittable boundary = hittable(Sphere_new(vec3(360, 150, 145), 70, glass));
+  Hittable *boundary = Sphere_new(vec3(360, 150, 145), 70, glass);
   HittableList_append(&world->objects, boundary);
-  HittableList_append(&world->objects, hittable(ConstantMedium_new(boundary, 0.2, Solid_new(vec3(0.2, 0.4, 0.9)))));
+  HittableList_append(&world->objects, ConstantMedium_new(boundary, 0.2, Solid_new(vec3(0.2, 0.4, 0.9))));
 
   // mist
-  boundary = hittable(Sphere_new(vec3(0, 0, 0), 5000, glass));
-  HittableList_append(&world->objects, hittable(ConstantMedium_new(boundary, 0.0001, Solid_new(vec3(1, 1, 1)))));
+  boundary = Sphere_new(vec3(0, 0, 0), 5000, glass);
+  HittableList_append(&world->objects, ConstantMedium_new(boundary, 0.0001, Solid_new(vec3(1, 1, 1))));
 
   Material earth = material(Lambertian_new(Image_new("earthmap.jpg")));
   MaterialList_append(&world->materials, earth);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(400, 200, 400), 100, earth)));
+  HittableList_append(&world->objects, Sphere_new(vec3(400, 200, 400), 100, earth));
 
   Material perlin = material(Lambertian_new(Perlin_new(0.1, 7, &rng)));
   MaterialList_append(&world->materials, perlin);
-  HittableList_append(&world->objects, hittable(Sphere_new(vec3(220, 280, 300), 80, perlin)));
+  HittableList_append(&world->objects, Sphere_new(vec3(220, 280, 300), 80, perlin));
 
   Material white = material(Lambertian_new(Solid_new(vec3(0.73, 0.73, 0.73))));
   MaterialList_append(&world->materials, white);
 
   int ns = 1000;
-  HittableList *boxes2_list = HittableList_new(ns);
+  HittableList *boxes2_list = (HittableList *)HittableList_new(ns);
   for (int i = 0; i < ns; i++) {
     Vec3 center = vec3_rand_between(&rng, 0, 165);
-    HittableList_append(boxes2_list, hittable(Sphere_new(center, 10, white)));
+    HittableList_append(boxes2_list, Sphere_new(center, 10, white));
   }
-  Hittable boxes2;
+  Hittable *boxes2;
   if (enable_bvh) {
-    boxes2 = hittable(BVHNode_new(boxes2_list, &rng));
+    boxes2 = BVHNode_new(boxes2_list, &rng);
     free(boxes2_list->items);
     free(boxes2_list);
   } else
-    boxes2 = hittable(boxes2_list);
+    boxes2 = (Hittable *)boxes2_list;
 
-  boxes2 = hittable(RotateY_new(boxes2, 15.0f));
-  boxes2 = hittable(Translate_new(boxes2, vec3(-100, 270, 395)));
+  boxes2 = RotateY_new(boxes2, 15.0f);
+  boxes2 = Translate_new(boxes2, vec3(-100, 270, 395));
   HittableList_append(&world->objects, boxes2);
 
   camera->aspect_ratio = 1.0f;
