@@ -12,8 +12,13 @@ typedef struct Ray {
 
 Vec3 ray_at(const Ray *ray, float t);
 
-typedef struct AABB {
-  float x[3][2];
+typedef union AABB {
+  struct {
+    float x[2];
+    float y[2];
+    float z[2];
+  };
+  float values[3][2];
 } AABB;
 
 typedef enum HittableType {

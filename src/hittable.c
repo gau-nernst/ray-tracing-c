@@ -20,21 +20,21 @@ static AABB AABB_from_Vec3(Vec3 a, Vec3 b) {
 }
 static AABB AABB_from_AABB(AABB a, AABB b) {
   return (AABB){{
-      {fminf(a.x[0][0], b.x[0][0]), fmaxf(a.x[0][1], b.x[0][1])},
-      {fminf(a.x[1][0], b.x[1][0]), fmaxf(a.x[1][1], b.x[1][1])},
-      {fminf(a.x[2][0], b.x[2][0]), fmaxf(a.x[2][1], b.x[2][1])},
+      {fminf(a.x[0], b.x[0]), fmaxf(a.x[1], b.x[1])},
+      {fminf(a.y[0], b.y[0]), fmaxf(a.y[1], b.y[1])},
+      {fminf(a.z[0], b.z[0]), fmaxf(a.z[1], b.z[1])},
   }};
 }
 static AABB AABB_pad(AABB bbox) {
   float delta = 1e-4f;
   AABB padded;
   for (int a = 0; a < 3; a++) {
-    if (bbox.x[a][1] - bbox.x[a][0] < delta) {
-      padded.x[a][0] = bbox.x[a][0] - delta;
-      padded.x[a][1] = bbox.x[a][1] + delta;
+    if (bbox.values[a][1] - bbox.values[a][0] < delta) {
+      padded.values[a][0] = bbox.values[a][0] - delta;
+      padded.values[a][1] = bbox.values[a][1] + delta;
     } else {
-      padded.x[a][0] = bbox.x[a][0];
-      padded.x[a][1] = bbox.x[a][1];
+      padded.values[a][0] = bbox.values[a][0];
+      padded.values[a][1] = bbox.values[a][1];
     }
   }
   return padded;
@@ -64,8 +64,8 @@ static AABB Hittable_bbox(Hittable obj) {
 // for use with qsort()
 typedef int (*Comparator)(const void *, const void *);
 static int Hittable_compare_bbox(const Hittable *a, const Hittable *b, int axis) {
-  float a_ = Hittable_bbox(*a).x[axis][0];
-  float b_ = Hittable_bbox(*b).x[axis][0];
+  float a_ = Hittable_bbox(*a).values[axis][0];
+  float b_ = Hittable_bbox(*b).values[axis][0];
   return (a_ < b_) ? -1 : (a_ > b_) ? 1 : 0;
 }
 static int Hittable_compare_bbox_x(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 0); }
@@ -169,8 +169,8 @@ BVHNode *BVHNode_new(const HittableList *list, PCG32State *rng) define_init_new(
 void Translate_init(Translate *translate, Hittable object, Vec3 offset) {
   AABB bbox = Hittable_bbox(object);
   for (int i = 0; i < 3; i++) {
-    bbox.x[i][0] += offset.values[i];
-    bbox.x[i][1] += offset.values[i];
+    bbox.values[i][0] += offset.values[i];
+    bbox.values[i][1] += offset.values[i];
   }
   *translate = (Translate){object, offset, bbox};
 }
@@ -187,9 +187,9 @@ void RotateY_init(RotateY *rotate_y, Hittable object, float angle) {
   for (int i = 0; i < 2; i++)
     for (int j = 0; j < 2; j++)
       for (int k = 0; k < 2; k++) {
-        Vec3 tester = vec3((float)i * bbox.x[0][1] + (float)(1 - i) * bbox.x[0][0],
-                           (float)j * bbox.x[1][1] + (float)(1 - j) * bbox.x[1][0],
-                           (float)k * bbox.x[2][1] + (float)(1 - k) * bbox.x[2][0]);
+        Vec3 tester =
+            vec3((float)i * bbox.x[1] + (float)(1 - i) * bbox.x[0], (float)j * bbox.y[1] + (float)(1 - j) * bbox.y[0],
+                 (float)k * bbox.z[1] + (float)(1 - k) * bbox.z[0]);
         tester = Vec3_rotate_y_inverse(tester, cos_theta, sin_theta);
         min_p = vec3_min(min_p, tester);
         max_p = vec3_max(max_p, tester);
@@ -212,8 +212,8 @@ ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture alb
 static bool AABB_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {
   for (int i = 0; i < 3; i++) {
     float invD = 1.0f / ray->direction.values[i];
-    float t0 = (aabb->x[i][0] - ray->origin.values[i]) * invD;
-    float t1 = (aabb->x[i][1] - ray->origin.values[i]) * invD;
+    float t0 = (aabb->values[i][0] - ray->origin.values[i]) * invD;
+    float t1 = (aabb->values[i][1] - ray->origin.values[i]) * invD;
 
     if (invD < 0) {
       float tmp = t0;
