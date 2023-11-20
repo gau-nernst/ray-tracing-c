@@ -42,6 +42,7 @@ static Vec3 Checker_value(Checker *checker, float u, float v, Vec3 p) {
 
 void Image_init(Image *image, char *filename) {
   image->buffer = stbi_load(filename, &image->width, &image->height, NULL, 3);
+  assert((image->buffer != NULL) && "Unable to read image");
 }
 
 static Vec3 Image_value(Image *image, float u, float v) {
