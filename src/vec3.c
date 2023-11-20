@@ -26,7 +26,7 @@ Vec3 vec3_cross(Vec3 u, Vec3 v) {
       u.x[0] * v.x[1] - v.x[0] * u.x[1],
   };
 }
-Vec3 vec3_unit(Vec3 u) { return vec3_div(u, vec3_length(u)); }
+Vec3 vec3_normalize(Vec3 u) { return vec3_div(u, vec3_length(u)); }
 bool vec3_near_zero(Vec3 u) { return (fabsf(u.x[0]) < 1e-8f) && (fabsf(u.x[1]) < 1e-8f) && (fabsf(u.x[2]) < 1e-8f); }
 
 Vec3 vec3_rand(PCG32State *rng) { return (Vec3){pcg32_f32(rng), pcg32_f32(rng), pcg32_f32(rng)}; }

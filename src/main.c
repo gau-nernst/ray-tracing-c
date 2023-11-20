@@ -3,7 +3,34 @@
 #include "utils.h"
 #include <time.h>
 
-void scene_book1(World *world, Camera *camera) {
+void scene_metal_and_lambertian(World *world, Camera *camera) {
+  World_init(world, 4, 4);
+
+  Material mat;
+
+  mat = material(Lambertian_new(texture(Vec3_new(0.8, 0.8, 0.0))));
+  MaterialList_append(&world->materials, mat);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){0, -100.5, -1}, 100, mat)));
+
+  mat = material(Lambertian_new(texture(Vec3_new(0.7, 0.3, 0.3))));
+  MaterialList_append(&world->materials, mat);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){0, 0, -1}, 0.5, mat)));
+
+  mat = material(Metal_new(texture(Vec3_new(0.8, 0.8, 0.8)), 0.3));
+  MaterialList_append(&world->materials, mat);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){-1, 0, -1}, 0.5, mat)));
+
+  mat = material(Metal_new(texture(Vec3_new(0.8, 0.6, 0.2)), 1.0));
+  MaterialList_append(&world->materials, mat);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){1, 0, -1}, 0.5, mat)));
+
+  camera->vfov = 90.0f;
+  camera->background = (Vec3){0.7, 0.8, 1};
+  camera->look_from = (Vec3){0, 0, 0};
+  camera->look_to = (Vec3){0, 0, -1};
+}
+
+void scene_book1_final(World *world, Camera *camera) {
   size_t max_spheres = 4 + 22 * 22;
   World_init(world, max_spheres, max_spheres);
 
@@ -300,7 +327,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Unsupported option. Default to 0\n");
   case 0:
     fprintf(stderr, "Book 1\n");
-    scene_book1(&world, &camera);
+    // scene_book1_final(&world, &camera);
+    scene_metal_and_lambertian(&world, &camera);
     break;
   case 1:
     fprintf(stderr, "Book 2: Checker\n");

@@ -55,18 +55,16 @@ static Vec3 reflect(Vec3 incident, Vec3 normal) {
 }
 
 static bool Metal_scatter(Metal *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  Vec3 reflected = reflect(vec3_unit(incident), rec->normal);
+  Vec3 reflected = reflect(vec3_normalize(incident), rec->normal);
   *scattered = vec3_add(reflected, vec3_mul(vec3_rand_unit_vector(rng), mat->fuzz));
-  if (vec3_near_zero(*scattered)) // remove degenerate rays
-    *scattered = reflected;
   *color = _Texture_value(mat->albedo, rec);
-  return vec3_dot(*scattered, rec->normal) > 0; // check for degeneration
+  return vec3_dot(*scattered, rec->normal) > 0.0f; // check for degeneration
 }
 
 static bool Dielectric_scatter(Dielectric *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered,
                                Vec3 *color) {
   float eta = rec->front_face ? 1.0f / mat->eta : mat->eta;
-  incident = vec3_unit(incident);
+  incident = vec3_normalize(incident);
 
   float cos_theta = fminf(-vec3_dot(incident, rec->normal), 1.0f);
   float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);

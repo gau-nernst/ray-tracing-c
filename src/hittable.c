@@ -95,7 +95,7 @@ void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat) {
   quad->bbox = AABB_pad(AABB_from_Vec3(Q, vec3_add(Q, u, v)));
 
   Vec3 n = vec3_cross(quad->u, quad->v);
-  quad->normal = vec3_unit(n);
+  quad->normal = vec3_normalize(n);
   quad->D = vec3_dot(quad->normal, quad->Q);
   quad->w = vec3_div(n, vec3_length2(n));
 }
