@@ -124,7 +124,7 @@ typedef struct ConstantMedium {
   Material phase_fn;
 } ConstantMedium;
 
-void ConstantMedium_init(ConstantMedium *constant_medium, Hittable boundary, float density, Texture albedo);
-ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture albedo);
+void ConstantMedium_init(ConstantMedium *self, Hittable boundary, float density, Texture *albedo);
+ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture *albedo);
 
 #endif // HITTABLE_H

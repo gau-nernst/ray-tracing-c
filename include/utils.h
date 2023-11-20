@@ -26,7 +26,7 @@
   {                                                                                                                    \
     Type *obj = my_malloc(sizeof(Type));                                                                               \
     Type##_init(obj, __VA_ARGS__);                                                                                     \
-    return obj;                                                                                                        \
+    return (void *)obj;                                                                                                \
   }
 void *my_malloc(size_t size);
 

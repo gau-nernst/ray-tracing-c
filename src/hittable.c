@@ -199,14 +199,14 @@ void RotateY_init(RotateY *rotate_y, Hittable object, float angle) {
 }
 RotateY *RotateY_new(Hittable object, float angle) define_init_new(RotateY, object, angle);
 
-void ConstantMedium_init(ConstantMedium *constant_medium, Hittable boundary, float density, Texture albedo) {
-  *constant_medium = (ConstantMedium){
+void ConstantMedium_init(ConstantMedium *self, Hittable boundary, float density, Texture *albedo) {
+  *self = (ConstantMedium){
       boundary,
       -1.0f / density,
       material(Isotropic_new(albedo)),
   };
 }
-ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture albedo)
+ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture *albedo)
     define_init_new(ConstantMedium, boundary, density, albedo);
 
 static bool AABB_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max) {

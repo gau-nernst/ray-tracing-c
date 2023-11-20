@@ -7,11 +7,11 @@ define_list_source(Material);
 #define material_new(type, ...) define_struct_new(Material, type, __VA_ARGS__)
 
 SurfaceNormal *SurfaceNormal_new() { return NULL; };
-Lambertian *Lambertian_new(Texture albedo) define_struct_new(Lambertian, albedo);
-Metal *Metal_new(Texture albedo, float fuzz) define_struct_new(Metal, albedo, fuzz);
-Dielectric *Dielectric_new(Texture albedo, float eta) define_struct_new(Dielectric, albedo, eta);
-DiffuseLight *DiffuseLight_new(Texture albedo) define_struct_new(DiffuseLight, albedo);
-Isotropic *Isotropic_new(Texture albedo) define_struct_new(Isotropic, albedo);
+Lambertian *Lambertian_new(Texture *albedo) define_struct_new(Lambertian, albedo);
+Metal *Metal_new(Texture *albedo, float fuzz) define_struct_new(Metal, albedo, fuzz);
+Dielectric *Dielectric_new(Texture *albedo, float eta) define_struct_new(Dielectric, albedo, eta);
+DiffuseLight *DiffuseLight_new(Texture *albedo) define_struct_new(DiffuseLight, albedo);
+Isotropic *Isotropic_new(Texture *albedo) define_struct_new(Isotropic, albedo);
 
 static bool Lambertian_scatter(Lambertian *mat, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color);
 static bool Metal_scatter(Metal *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color);
@@ -40,7 +40,7 @@ bool scatter(Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Ve
   }
 }
 
-static Vec3 _Texture_value(Texture texture, HitRecord *rec) { return Texture_value(texture, rec->u, rec->v, rec->p); }
+static Vec3 _Texture_value(Texture *texture, HitRecord *rec) { return texture->value(texture, rec->u, rec->v, rec->p); }
 
 static bool Lambertian_scatter(Lambertian *mat, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
   *scattered = vec3_add(rec->normal, vec3_rand_unit_vector(rng));

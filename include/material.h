@@ -37,33 +37,33 @@ define_list_header(Material);
 typedef struct SurfaceNormal SurfaceNormal;
 
 typedef struct Lambertian {
-  Texture albedo;
+  Texture *albedo;
 } Lambertian;
 
 typedef struct Metal {
-  Texture albedo;
+  Texture *albedo;
   float fuzz;
 } Metal;
 
 typedef struct Dielectric {
-  Texture albedo;
+  Texture *albedo;
   float eta;
 } Dielectric;
 
 typedef struct DiffuseLight {
-  Texture albedo;
+  Texture *albedo;
 } DiffuseLight;
 
 typedef struct Isotropic {
-  Texture albedo;
+  Texture *albedo;
 } Isotropic;
 
 SurfaceNormal *SurfaceNormal_new();
-Lambertian *Lambertian_new(Texture albedo);
-Metal *Metal_new(Texture albedo, float fuzz);
-Dielectric *Dielectric_new(Texture albedo, float eta);
-DiffuseLight *DiffuseLight_new(Texture albedo);
-Isotropic *Isotropic_new(Texture albedo);
+Lambertian *Lambertian_new(Texture *albedo);
+Metal *Metal_new(Texture *albedo, float fuzz);
+Dielectric *Dielectric_new(Texture *albedo, float eta);
+DiffuseLight *DiffuseLight_new(Texture *albedo);
+Isotropic *Isotropic_new(Texture *albedo);
 
 typedef struct HitRecord {
   Vec3 p;
@@ -75,7 +75,7 @@ typedef struct HitRecord {
   bool front_face;
 } HitRecord;
 
-bool scatter(Vec3 incident, HitRecord *hit_record, PCG32State *rng, Vec3 *scattered, Vec3 *color);
-Vec3 emit(HitRecord *hit_record);
+bool scatter(Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color);
+Vec3 emit(HitRecord *rec);
 
 #endif // MATERIAL_H
