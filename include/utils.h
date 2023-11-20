@@ -4,6 +4,10 @@
 #include <assert.h>
 #include <stdlib.h>
 
+// gcc with -std=c11 doesn't define M_PI
+#define M_PI 3.14159265358979323846264338327950288
+#define M_1_PI 0.318309886183790671537767526745028724
+
 #ifndef min
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #endif

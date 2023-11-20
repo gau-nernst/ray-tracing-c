@@ -12,6 +12,7 @@ typedef enum MaterialType {
   METAL,
   DIELECTRIC,
   DIFFUSE_LIGHT,
+  ISOTROPIC,
 } MaterialType;
 
 typedef struct Material {
@@ -28,7 +29,8 @@ define_list_header(Material);
         Lambertian *: LAMBERTIAN,                                                                                      \
         Metal *: METAL,                                                                                                \
         Dielectric *: DIELECTRIC,                                                                                      \
-        DiffuseLight *: DIFFUSE_LIGHT),                                                                                \
+        DiffuseLight *: DIFFUSE_LIGHT,                                                                                 \
+        Isotropic *: ISOTROPIC),                                                                                       \
         ptr                                                                                                            \
   }
 
@@ -52,11 +54,16 @@ typedef struct DiffuseLight {
   Texture albedo;
 } DiffuseLight;
 
+typedef struct Isotropic {
+  Texture albedo;
+} Isotropic;
+
 SurfaceNormal *SurfaceNormal_new();
 Lambertian *Lambertian_new(Texture albedo);
 Metal *Metal_new(Texture albedo, float fuzz);
 Dielectric *Dielectric_new(Texture albedo, float eta);
 DiffuseLight *DiffuseLight_new(Texture albedo);
+Isotropic *Isotropic_new(Texture albedo);
 
 typedef struct HitRecord {
   Vec3 p;

@@ -12,12 +12,18 @@ typedef struct Ray {
 
 Vec3 ray_at(const Ray *ray, float t);
 
+typedef struct AABB {
+  float x[3][2];
+} AABB;
+
 typedef enum HittableType {
   HITTABLE_LIST,
   SPHERE,
   QUAD,
+  BVH_NODE,
   TRANSLATE,
   ROTATE_Y,
+  CONSTANT_MEDIUM,
 } HittableType;
 
 typedef struct Hittable {
@@ -31,23 +37,37 @@ typedef struct Hittable {
         HittableList *: HITTABLE_LIST,                                                                                 \
         Sphere *: SPHERE,                                                                                              \
         Quad *: QUAD,                                                                                                  \
+        BVHNode *: BVH_NODE,                                                                                           \
         Translate *: TRANSLATE,                                                                                        \
-        RotateY *: ROTATE_Y),                                                                                          \
+        RotateY *: ROTATE_Y,                                                                                           \
+        ConstantMedium *: CONSTANT_MEDIUM),                                                                            \
         ptr                                                                                                            \
   }
 
-define_list_header(Hittable);
+typedef struct HittableList {
+  size_t max_size;
+  size_t size;
+  Hittable *items;
+  AABB bbox;
+} HittableList;
 
-bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
-bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *hit_record);
+void HittableList_init(HittableList *list, size_t max_size);
+HittableList *HittableList_new(size_t max_size);
+void HittableList_append(HittableList *list, Hittable item);
+
+bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng);
+bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *rec,
+                      PCG32State *rng);
 
 typedef struct Sphere {
   Vec3 center;
   float radius;
   Material material;
+  AABB bbox;
 } Sphere;
 
-Sphere *Sphere_new(Vec3 center, float radius, Material material);
+void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat);
+Sphere *Sphere_new(Vec3 center, float radius, Material mat);
 
 typedef struct Quad {
   Vec3 Q;
@@ -57,6 +77,7 @@ typedef struct Quad {
   float D;
   Vec3 w;
   Material material;
+  AABB bbox;
 } Quad;
 
 void Quad_init(Quad *quad, Vec3 Q, Vec3 u, Vec3 v, Material mat);
@@ -64,24 +85,41 @@ Quad *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat);
 
 HittableList *Box_new(Vec3 a, Vec3 b, Material mat);
 
+typedef struct BVHNode {
+  Hittable left;
+  Hittable right;
+  AABB bbox;
+} BVHNode;
+
+void BVHNode_init(BVHNode *bvh, const HittableList *list, PCG32State *rng);
+BVHNode *BVHNode_new(const HittableList *list, PCG32State *rng);
+
 typedef struct Translate {
   Hittable object;
   Vec3 offset;
+  AABB bbox;
 } Translate;
 
+void Translate_init(Translate *translate, Hittable object, Vec3 offset);
 Translate *Translate_new(Hittable object, Vec3 offset);
 
 typedef struct RotateY {
   Hittable object;
   float sin_theta;
   float cos_theta;
+  AABB bbox;
 } RotateY;
 
 void RotateY_init(RotateY *rotate_y, Hittable object, float angle);
 RotateY *RotateY_new(Hittable object, float angle);
 
-// typedef struct AABB {
-//   float x[3][2];
-// } AABB;
+typedef struct ConstantMedium {
+  Hittable boundary;
+  float neg_inv_density;
+  Material phase_fn;
+} ConstantMedium;
+
+void ConstantMedium_init(ConstantMedium *constant_medium, Hittable boundary, float density, Texture albedo);
+ConstantMedium *ConstantMedium_new(Hittable boundary, float density, Texture albedo);
 
 #endif // HITTABLE_H

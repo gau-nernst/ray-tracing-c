@@ -1,8 +1,6 @@
 #include "raytracing.h"
-#include <stdio.h>
-
-#define _USE_MATH_DEFINES // for MSVC
 #include <math.h>
+#include <stdio.h>
 
 void World_init(World *world, size_t max_objects, size_t max_materials) {
   HittableList_init(&world->objects, max_objects);
@@ -15,7 +13,7 @@ void Camera_init(Camera *camera) {
   float viewport_height = 2.0 * tanf(camera->vfov * (float)M_PI / 360.0f) * camera->focal_length;
   float viewport_width = viewport_height * (float)camera->img_width / (float)camera->img_height;
 
-  camera->w = vec3_unit(vec3_sub(camera->look_from, camera->look_to));
+  camera->w = vec3_normalize(vec3_sub(camera->look_from, camera->look_to));
   camera->u = vec3_cross(camera->vup, camera->w);
   camera->v = vec3_cross(camera->w, camera->u);
 
@@ -39,17 +37,18 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
   if (depth <= 0)
     return (Vec3){0, 0, 0};
 
-  HitRecord hit_record;
-  if (HittableList_hit(&world->objects, ray, 1e-3f, INFINITY, &hit_record)) {
+  HitRecord rec;
+  if (HittableList_hit(&world->objects, ray, 1e-3f, INFINITY, &rec, rng)) {
     Ray new_ray;
-    new_ray.origin = hit_record.p;
+    new_ray.origin = rec.p;
     Vec3 scatter_color;
+    Vec3 emission_color = emit(&rec);
 
-    if (scatter(ray->direction, &hit_record, rng, &new_ray.direction, &scatter_color))
-      scatter_color =
-          vec3_mul(Camera_ray_color(camera, &new_ray, world, depth - 1, rng), scatter_color); // spawn new ray
+    if (!scatter(ray->direction, &rec, rng, &new_ray.direction, &scatter_color))
+      return emission_color;
 
-    return vec3_add(scatter_color, emit(&hit_record));
+    scatter_color = vec3_mul(scatter_color, Camera_ray_color(camera, &new_ray, world, depth - 1, rng)); // spawn new ray
+    return vec3_add(scatter_color, emit(&rec));
   }
 
   // scene background

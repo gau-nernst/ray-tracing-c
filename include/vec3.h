@@ -37,7 +37,7 @@ float vec3_length2(Vec3 u);
 float vec3_length(Vec3 u);
 float vec3_dot(Vec3 u, Vec3 v);
 Vec3 vec3_cross(Vec3 u, Vec3 v);
-Vec3 vec3_unit(Vec3 u);
+Vec3 vec3_normalize(Vec3 u);
 bool vec3_near_zero(Vec3 u);
 
 Vec3 vec3_rand(PCG32State *rng);

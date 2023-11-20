@@ -17,7 +17,7 @@ typedef struct Texture {
 #define texture(ptr)                                                                                                   \
   (Texture) { _Generic((ptr), Vec3 *: SOLID, Checker *: CHECKER, Image *: IMAGE, Perlin *: PERLIN), ptr }
 
-Vec3 texture_value(Texture texture, float u, float v, Vec3 p);
+Vec3 Texture_value(Texture texture, float u, float v, Vec3 p);
 
 typedef struct Checker {
   float scale;

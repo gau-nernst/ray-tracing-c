@@ -3,7 +3,34 @@
 #include "utils.h"
 #include <time.h>
 
-void scene_book1(World *world, Camera *camera) {
+void scene_metal_and_lambertian(World *world, Camera *camera) {
+  World_init(world, 4, 4);
+
+  Material mat;
+
+  mat = material(Lambertian_new(texture(Vec3_new(0.8, 0.8, 0.0))));
+  MaterialList_append(&world->materials, mat);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){0, -100.5, -1}, 100, mat)));
+
+  mat = material(Lambertian_new(texture(Vec3_new(0.7, 0.3, 0.3))));
+  MaterialList_append(&world->materials, mat);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){0, 0, -1}, 0.5, mat)));
+
+  mat = material(Metal_new(texture(Vec3_new(0.8, 0.8, 0.8)), 0.3));
+  MaterialList_append(&world->materials, mat);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){-1, 0, -1}, 0.5, mat)));
+
+  mat = material(Metal_new(texture(Vec3_new(0.8, 0.6, 0.2)), 1.0));
+  MaterialList_append(&world->materials, mat);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){1, 0, -1}, 0.5, mat)));
+
+  camera->vfov = 90.0f;
+  camera->background = (Vec3){0.7, 0.8, 1};
+  camera->look_from = (Vec3){0, 0, 0};
+  camera->look_to = (Vec3){0, 0, -1};
+}
+
+void scene_book1_final(World *world, Camera *camera) {
   size_t max_spheres = 4 + 22 * 22;
   World_init(world, max_spheres, max_spheres);
 
@@ -58,6 +85,11 @@ void scene_book1(World *world, Camera *camera) {
         HittableList_append(&world->objects, hittable(Sphere_new(center, radius, mat)));
       }
     }
+
+  BVHNode *bvh = BVHNode_new(&world->objects, &rng);
+  free(world->objects.items);
+  HittableList_init(&world->objects, 1);
+  HittableList_append(&world->objects, hittable(bvh));
 
   camera->vfov = 20.0f;
   camera->background = (Vec3){0.7, 0.8, 1};
@@ -180,6 +212,98 @@ void scene_cornell_box(World *world, Camera *camera) {
   camera->look_to = (Vec3){278, 278, 0};
 }
 
+void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
+  PCG32State rng;
+  pcg32_seed(&rng, 19, 29);
+
+  World_init(world, 11, 10);
+
+  Material ground = material(Lambertian_new(texture(Vec3_new(0.48, 0.83, 0.53))));
+  MaterialList_append(&world->materials, ground);
+
+  int boxes_per_side = 20;
+  HittableList *boxes1_list = HittableList_new(boxes_per_side * boxes_per_side);
+  for (int i = 0; i < boxes_per_side; i++)
+    for (int j = 0; j < boxes_per_side; j++) {
+      float w = 100.0f;
+      Vec3 p0 = {-1000.0f + i * w, 0.0f, -1000.0f + j * w};
+      Vec3 p1 = {-1000.0f + (i + 1) * w, pcg32_f32_between(&rng, 1, 101), -1000.0f + (j + 1) * w};
+      HittableList_append(boxes1_list, hittable(Box_new(p0, p1, ground)));
+    }
+
+  Hittable boxes1;
+  if (enable_bvh) {
+    boxes1 = hittable(BVHNode_new(boxes1_list, &rng));
+    free(boxes1_list->items);
+    free(boxes1_list);
+  } else
+    boxes1 = hittable(boxes1_list);
+  HittableList_append(&world->objects, boxes1);
+
+  Material light = material(DiffuseLight_new(texture(Vec3_new(7, 7, 7))));
+  MaterialList_append(&world->materials, light);
+  HittableList_append(&world->objects,
+                      hittable(Quad_new((Vec3){123, 554, 147}, (Vec3){300, 0, 0}, (Vec3){0, 0, 265}, light)));
+
+  Vec3 center1 = {400, 400, 200};
+  // Vec3 center2 = {430, 400, 200}; // TODO: moving sphere
+  Material sphere_mat = material(Lambertian_new(texture(Vec3_new(0.7, 0.3, 0.1))));
+  MaterialList_append(&world->materials, sphere_mat);
+  HittableList_append(&world->objects, hittable(Sphere_new(center1, 50, sphere_mat)));
+
+  Material glass = material(Dielectric_new(texture(Vec3_new(1, 1, 1)), 1.5));
+  MaterialList_append(&world->materials, glass);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){260, 150, 45}, 50, glass)));
+
+  Material metal = material(Metal_new(texture(Vec3_new(0.8, 0.8, 0.9)), 1.0));
+  MaterialList_append(&world->materials, metal);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){0, 150, 145}, 50, metal)));
+
+  // subsurface material
+  Hittable boundary = hittable(Sphere_new((Vec3){360, 150, 145}, 70, glass));
+  HittableList_append(&world->objects, boundary);
+  HittableList_append(&world->objects, hittable(ConstantMedium_new(boundary, 0.2, texture(Vec3_new(0.2, 0.4, 0.9)))));
+
+  // mist
+  boundary = hittable(Sphere_new((Vec3){0, 0, 0}, 5000, glass));
+  HittableList_append(&world->objects, hittable(ConstantMedium_new(boundary, 0.0001, texture(Vec3_new(1, 1, 1)))));
+
+  Material earth = material(Lambertian_new(texture(Image_new("earthmap.jpg"))));
+  MaterialList_append(&world->materials, earth);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){400, 200, 400}, 100, earth)));
+
+  Material perlin = material(Lambertian_new(texture(Perlin_new(0.1, 7, &rng))));
+  MaterialList_append(&world->materials, perlin);
+  HittableList_append(&world->objects, hittable(Sphere_new((Vec3){220, 280, 300}, 80, perlin)));
+
+  Material white = material(Lambertian_new(texture(Vec3_new(0.73, 0.73, 0.73))));
+  MaterialList_append(&world->materials, white);
+
+  int ns = 1000;
+  HittableList *boxes2_list = HittableList_new(ns);
+  for (int i = 0; i < ns; i++) {
+    Vec3 center = vec3_rand_between(&rng, 0, 165);
+    HittableList_append(boxes2_list, hittable(Sphere_new(center, 10, white)));
+  }
+  Hittable boxes2;
+  if (enable_bvh) {
+    boxes2 = hittable(BVHNode_new(boxes2_list, &rng));
+    free(boxes2_list->items);
+    free(boxes2_list);
+  } else
+    boxes2 = hittable(boxes2_list);
+
+  boxes2 = hittable(RotateY_new(boxes2, 15.0f));
+  boxes2 = hittable(Translate_new(boxes2, (Vec3){-100, 270, 395}));
+  HittableList_append(&world->objects, boxes2);
+
+  camera->aspect_ratio = 1.0f;
+  camera->background = (Vec3){0, 0, 0};
+  camera->vfov = 40.0f;
+  camera->look_from = (Vec3){478, 278, -600};
+  camera->look_to = (Vec3){278, 278, 0};
+}
+
 int main(int argc, char *argv[]) {
   assert(argc > 1);
 
@@ -187,7 +311,7 @@ int main(int argc, char *argv[]) {
   Camera camera;
   camera.aspect_ratio = 16.0f / 9.0f;
   camera.img_width = 400;
-  camera.samples_per_pixel = 10;
+  camera.samples_per_pixel = 100;
   camera.max_depth = 10;
   camera.vup = (Vec3){0, 1, 0};
   camera.dof_angle = 0.0f;
@@ -202,28 +326,35 @@ int main(int argc, char *argv[]) {
   default:
     fprintf(stderr, "Unsupported option. Default to 0\n");
   case 0:
-    fprintf(stderr, "Book 1\n");
-    scene_book1(&world, &camera);
+    fprintf(stderr, "Book 1: Metal and Lambertian\n");
+    scene_metal_and_lambertian(&world, &camera);
     break;
   case 1:
+    fprintf(stderr, "Book 1: Final scene\n");
+    scene_book1_final(&world, &camera);
+  case 2:
     fprintf(stderr, "Book 2: Checker\n");
     scene_checker(&world, &camera);
     break;
-  case 2:
+  case 3:
     fprintf(stderr, "Book 2: Earth\n");
     scene_earth(&world, &camera);
     break;
-  case 3:
+  case 4:
     fprintf(stderr, "Book 2: Perlin noise\n");
     scene_perlin(&world, &camera);
     break;
-  case 4:
+  case 5:
     fprintf(stderr, "Book 2: Simple light\n");
     scene_simple_light(&world, &camera);
     break;
-  case 5:
+  case 6:
     fprintf(stderr, "Book 2: Cornell box\n");
     scene_cornell_box(&world, &camera);
+    break;
+  case 7:
+    fprintf(stderr, "Book 2: Final scene\n");
+    scene_book2_final(&world, &camera, true);
     break;
   }
   Camera_init(&camera);

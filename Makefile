@@ -1,4 +1,4 @@
-CFLAGS += -Wall -Ofast -MMD -MP -Iinclude
+CFLAGS += -std=c11 -Wall -Ofast -MMD -MP -Iinclude
 LDLIBS += -lm
 
 ifdef ENABLE_OPENMP
