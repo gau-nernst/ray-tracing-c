@@ -10,7 +10,7 @@ void World_init(World *world, size_t max_objects, size_t max_materials) {
 void Camera_init(Camera *camera) {
   camera->img_height = (int)((float)camera->img_width / camera->aspect_ratio);
 
-  float viewport_height = 2.0 * tanf(camera->vfov * (float)M_PI / 360.0f) * camera->focal_length;
+  float viewport_height = 2.0f * tanf(camera->vfov * (float)M_PI / 360.0f) * camera->focal_length;
   float viewport_width = viewport_height * (float)camera->img_width / (float)camera->img_height;
 
   camera->w = vec3_normalize(vec3_sub(camera->look_from, camera->look_to));

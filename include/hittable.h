@@ -21,34 +21,6 @@ typedef union AABB {
   float values[3][2];
 } AABB;
 
-// typedef enum HittableType {
-//   HITTABLE_LIST,
-//   SPHERE,
-//   QUAD,
-//   BVH_NODE,
-//   TRANSLATE,
-//   ROTATE_Y,
-//   CONSTANT_MEDIUM,
-// } HittableType;
-
-// typedef struct Hittable {
-//   HittableType type;
-//   void *ptr;
-// } Hittable;
-
-// #define hittable(ptr)                                                                                                  \
-//   (Hittable) {                                                                                                         \
-//     _Generic((ptr),                                                                                                    \
-//         HittableList *: HITTABLE_LIST,                                                                                 \
-//         Sphere *: SPHERE,                                                                                              \
-//         Quad *: QUAD,                                                                                                  \
-//         BVHNode *: BVH_NODE,                                                                                           \
-//         Translate *: TRANSLATE,                                                                                        \
-//         RotateY *: ROTATE_Y,                                                                                           \
-//         ConstantMedium *: CONSTANT_MEDIUM),                                                                            \
-//         ptr                                                                                                            \
-//   }
-
 typedef struct Hittable Hittable;
 typedef bool HittableHitFn(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                            PCG32State *rng);
@@ -68,10 +40,6 @@ typedef struct HittableList {
 void HittableList_init(HittableList *self, size_t max_size);
 Hittable *HittableList_new(size_t max_size);
 void HittableList_append(HittableList *self, Hittable *item);
-
-// bool Hittable_hit(Hittable obj, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng);
-// bool HittableList_hit(const HittableList *list, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-//                       PCG32State *rng);
 
 typedef struct Sphere {
   Hittable hittable;

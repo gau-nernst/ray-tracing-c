@@ -110,5 +110,5 @@ static float Perlin_turbulence(Perlin *perlin, Vec3 p) {
     weight *= 0.5f;
     p = vec3_mul(p, 2.0f);
   }
-  return fabs(value);
+  return fabsf(value);
 }

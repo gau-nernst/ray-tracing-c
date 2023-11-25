@@ -117,8 +117,8 @@ static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float
   Vec3 outward_normal = vec3_div(vec3_sub(rec->p, self->center), self->radius);
   rec->front_face = vec3_dot(ray->direction, outward_normal) < 0.0f;
   rec->normal = rec->front_face ? outward_normal : vec3_neg(outward_normal);
-  rec->u = (atan2f(-outward_normal.z, outward_normal.x) + (float)M_PI) * (float)M_1_PI * 0.5;
-  rec->v = acosf(-outward_normal.y) * M_1_PI;
+  rec->u = (atan2f(-outward_normal.z, outward_normal.x) + (float)M_PI) * (float)M_1_PI * 0.5f;
+  rec->v = acosf(-outward_normal.y) * (float)M_1_PI;
   rec->material = self->material;
 
   return true;
@@ -144,7 +144,7 @@ static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t
   Quad *self = (Quad *)self_;
 
   float denom = vec3_dot(self->normal, ray->direction);
-  if (fabs(denom) < 1e-8f)
+  if (fabsf(denom) < 1e-8f)
     return false;
 
   float t = (self->D - vec3_dot(self->normal, ray->origin)) / denom;
