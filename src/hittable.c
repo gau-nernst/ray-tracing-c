@@ -82,14 +82,14 @@ static bool HittableList_hit(const Hittable *self_, const Ray *ray, float t_min,
 
 static HittableHitFn Sphere_hit;
 static AABB Sphere_bbox(const Hittable *self_) { return ((Sphere *)self_)->bbox; }
-void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material mat) {
+void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material *mat) {
   *sphere = (Sphere){{Sphere_hit, Sphere_bbox},
                      center,
                      radius,
                      mat,
                      AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius))};
 }
-Hittable *Sphere_new(Vec3 center, float radius, Material mat) define_init_new(Sphere, center, radius, mat);
+Hittable *Sphere_new(Vec3 center, float radius, Material *mat) define_init_new(Sphere, center, radius, mat);
 static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                        PCG32State *rng) {
   Sphere *self = (Sphere *)self_;
@@ -126,7 +126,7 @@ static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float
 
 static HittableHitFn Quad_hit;
 static AABB Quad_bbox(const Hittable *self_) { return ((Quad *)self_)->bbox; }
-void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material mat) {
+void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material *mat) {
   self->hittable = (Hittable){Quad_hit, Quad_bbox};
   self->Q = Q;
   self->u = u;
@@ -134,12 +134,12 @@ void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material mat) {
   self->material = mat;
   self->bbox = AABB_pad(AABB_from_Vec3(Q, vec3_add(Q, u, v)));
 
-  Vec3 n = vec3_cross(self->u, self->v);
+  Vec3 n = vec3_cross(u, v);
   self->normal = vec3_normalize(n);
-  self->D = vec3_dot(self->normal, self->Q);
+  self->D = vec3_dot(self->normal, Q);
   self->w = vec3_div(n, vec3_length2(n));
 }
-Hittable *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat) define_init_new(Quad, Q, u, v, mat);
+Hittable *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material *mat) define_init_new(Quad, Q, u, v, mat);
 static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng) {
   Quad *self = (Quad *)self_;
 
@@ -170,7 +170,7 @@ static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t
   return true;
 }
 
-Hittable *Box_new(Vec3 a, Vec3 b, Material mat) {
+Hittable *Box_new(Vec3 a, Vec3 b, Material *mat) {
   HittableList *list = (HittableList *)HittableList_new(6);
 
   Vec3 min_p = vec3_min(a, b);
@@ -350,7 +350,7 @@ void ConstantMedium_init(ConstantMedium *self, Hittable *boundary, float density
       {ConstantMedium_hit, ConstantMedium_bbox},
       boundary,
       -1.0f / density,
-      material(Isotropic_new(albedo)),
+      Isotropic_new(albedo),
   };
 }
 Hittable *ConstantMedium_new(Hittable *boundary, float density, Texture *albedo)

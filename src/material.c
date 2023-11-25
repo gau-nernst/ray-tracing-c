@@ -1,68 +1,49 @@
 #include "material.h"
+#include "utils.h"
+#include "vec3.h"
 #include <math.h>
 #include <stdlib.h>
 
-define_list_source(Material);
-
-#define material_new(type, ...) define_struct_new(Material, type, __VA_ARGS__)
-
-SurfaceNormal *SurfaceNormal_new() { return NULL; };
-Lambertian *Lambertian_new(Texture *albedo) define_struct_new(Lambertian, albedo);
-Metal *Metal_new(Texture *albedo, float fuzz) define_struct_new(Metal, albedo, fuzz);
-Dielectric *Dielectric_new(Texture *albedo, float eta) define_struct_new(Dielectric, albedo, eta);
-DiffuseLight *DiffuseLight_new(Texture *albedo) define_struct_new(DiffuseLight, albedo);
-Isotropic *Isotropic_new(Texture *albedo) define_struct_new(Isotropic, albedo);
-
-static bool Lambertian_scatter(Lambertian *mat, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color);
-static bool Metal_scatter(Metal *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color);
-static bool Dielectric_scatter(Dielectric *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered,
-                               Vec3 *color);
-static bool Isotropic_scatter(Isotropic *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered,
-                              Vec3 *color);
-
-bool scatter(Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
-  Material mat = rec->material;
-  switch (mat.type) {
-  case SURFACE_NORMAL:
-    *color = vec3float_mul(vec3_add(rec->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
-    return false;
-  case LAMBERTIAN:
-    return Lambertian_scatter(mat.ptr, rec, rng, scattered, color);
-  case METAL:
-    return Metal_scatter(mat.ptr, incident, rec, rng, scattered, color);
-  case DIELECTRIC:
-    return Dielectric_scatter(mat.ptr, incident, rec, rng, scattered, color);
-  case ISOTROPIC:
-    return Isotropic_scatter(mat.ptr, incident, rec, rng, scattered, color);
-  default:
-    *color = VEC3_ZERO;
-    return false;
-  }
-}
-
 static Vec3 _Texture_value(Texture *texture, HitRecord *rec) { return texture->value(texture, rec->u, rec->v, rec->p); }
+static Vec3 Material_emit(HitRecord *rec) { return VEC3_ZERO; }
 
-static bool Lambertian_scatter(Lambertian *mat, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool SurfaceNormal_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+  *color = vec3float_mul(vec3_add(rec->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+  return false;
+}
+void SurfaceNormal_init(SurfaceNormal *self) { *self = (SurfaceNormal){SurfaceNormal_scatter, Material_emit}; }
+Material *SurfaceNormal_new() define_init_new(SurfaceNormal);
+
+static bool Lambertian_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+  Lambertian *mat = (Lambertian *)rec->material;
   *scattered = vec3_add(rec->normal, vec3_rand_unit_vector(rng));
   if (vec3_near_zero(*scattered)) // remove degenerate rays
     *scattered = rec->normal;
   *color = _Texture_value(mat->albedo, rec);
   return true;
 }
+void Lambertian_init(Lambertian *self, Texture *albedo) {
+  *self = (Lambertian){{Lambertian_scatter, Material_emit}, albedo};
+}
+Material *Lambertian_new(Texture *albedo) define_init_new(Lambertian, albedo);
 
 static Vec3 reflect(Vec3 incident, Vec3 normal) {
   return vec3_sub(incident, vec3_mul(normal, 2.0f * vec3_dot(incident, normal)));
 }
-
-static bool Metal_scatter(Metal *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool Metal_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+  Metal *mat = (Metal *)rec->material;
   Vec3 reflected = reflect(vec3_normalize(incident), rec->normal);
   *scattered = vec3_add(reflected, vec3_mul(vec3_rand_unit_vector(rng), mat->fuzz));
   *color = _Texture_value(mat->albedo, rec);
   return vec3_dot(*scattered, rec->normal) > 0.0f; // check for degeneration
 }
+void Metal_init(Metal *self, Texture *albedo, float fuzz) {
+  *self = (Metal){{Metal_scatter, Material_emit}, albedo, fuzz};
+}
+Material *Metal_new(Texture *albedo, float fuzz) define_init_new(Metal, albedo, fuzz);
 
-static bool Dielectric_scatter(Dielectric *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered,
-                               Vec3 *color) {
+static bool Dielectric_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+  Dielectric *mat = (Dielectric *)rec->material;
   float eta = rec->front_face ? 1.0f / mat->eta : mat->eta;
   incident = vec3_normalize(incident);
 
@@ -84,22 +65,30 @@ static bool Dielectric_scatter(Dielectric *mat, Vec3 incident, HitRecord *rec, P
   *color = _Texture_value(mat->albedo, rec);
   return true;
 }
+void Dielectric_init(Dielectric *self, Texture *albedo, float eta) {
+  *self = (Dielectric){{Dielectric_scatter, Material_emit}, albedo, eta};
+}
+Material *Dielectric_new(Texture *albedo, float eta) define_init_new(Dielectric, albedo, eta);
 
-static bool Isotropic_scatter(Isotropic *mat, Vec3 incident, HitRecord *rec, PCG32State *rng, Vec3 *scattered,
-                              Vec3 *color) {
+static bool DiffuseLight_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+  return false;
+}
+static Vec3 DiffuseLight_emit(HitRecord *rec) {
+  DiffuseLight *mat = (DiffuseLight *)rec->material;
+  return _Texture_value(mat->albedo, rec);
+}
+void DiffuseLight_init(DiffuseLight *self, Texture *albedo) {
+  *self = (DiffuseLight){{DiffuseLight_scatter, DiffuseLight_emit}, albedo};
+}
+Material *DiffuseLight_new(Texture *albedo) define_init_new(DiffuseLight, albedo);
+
+static bool Isotropic_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+  Isotropic *mat = (Isotropic *)rec->material;
   *scattered = vec3_rand_unit_vector(rng);
   *color = _Texture_value(mat->albedo, rec);
   return true;
 }
-
-static Vec3 DiffuseLight_emit(DiffuseLight *mat, HitRecord *rec) { return _Texture_value(mat->albedo, rec); }
-
-Vec3 emit(HitRecord *rec) {
-  Material mat = rec->material;
-  switch (mat.type) {
-  case DIFFUSE_LIGHT:
-    return DiffuseLight_emit(mat.ptr, rec);
-  default:
-    return VEC3_ZERO;
-  }
+void Isotropic_init(Isotropic *self, Texture *albedo) {
+  *self = (Isotropic){{Isotropic_scatter, Material_emit}, albedo};
 }
+Material *Isotropic_new(Texture *albedo) define_init_new(Isotropic, albedo);

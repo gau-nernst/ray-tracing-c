@@ -2,10 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 
-void World_init(World *world, size_t max_objects, size_t max_materials) {
-  HittableList_init(&world->objects, max_objects);
-  MaterialList_init(&world->materials, max_materials);
-}
+void World_init(World *world, size_t max_objects) { HittableList_init(&world->objects, max_objects); }
 
 void Camera_init(Camera *camera) {
   camera->img_height = (int)((float)camera->img_width / camera->aspect_ratio);
@@ -38,18 +35,18 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     return VEC3_ZERO;
 
   HitRecord rec;
-  Hittable *hittable = (Hittable *)&world->objects;
-  if (hittable->hit(hittable, ray, 1e-3f, INFINITY, &rec, rng)) {
+  const Hittable *objects = &world->objects.hittable;
+  if (objects->hit(objects, ray, 1e-3f, INFINITY, &rec, rng)) {
     Ray new_ray;
     new_ray.origin = rec.p;
     Vec3 scatter_color;
-    Vec3 emission_color = emit(&rec);
+    Vec3 emission_color = rec.material->emit(&rec);
 
-    if (!scatter(ray->direction, &rec, rng, &new_ray.direction, &scatter_color))
+    if (!rec.material->scatter(&rec, ray->direction, rng, &new_ray.direction, &scatter_color))
       return emission_color;
 
     scatter_color = vec3_mul(scatter_color, Camera_ray_color(camera, &new_ray, world, depth - 1, rng)); // spawn new ray
-    return vec3_add(scatter_color, emit(&rec));
+    return vec3_add(scatter_color, emission_color);
   }
 
   // scene background

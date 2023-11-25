@@ -8,10 +8,9 @@
 
 typedef struct World {
   HittableList objects;
-  MaterialList materials;
 } World;
 
-void World_init(World *world, size_t max_objects, size_t max_materials);
+void World_init(World *world, size_t max_objects);
 
 typedef struct Camera {
   float aspect_ratio;

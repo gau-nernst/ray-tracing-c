@@ -45,12 +45,12 @@ typedef struct Sphere {
   Hittable hittable;
   Vec3 center;
   float radius;
-  Material material;
+  Material *material;
   AABB bbox;
 } Sphere;
 
-void Sphere_init(Sphere *self, Vec3 center, float radius, Material mat);
-Hittable *Sphere_new(Vec3 center, float radius, Material mat);
+void Sphere_init(Sphere *self, Vec3 center, float radius, Material *mat);
+Hittable *Sphere_new(Vec3 center, float radius, Material *mat);
 
 typedef struct Quad {
   Hittable hittable;
@@ -60,13 +60,13 @@ typedef struct Quad {
   Vec3 normal;
   float D;
   Vec3 w;
-  Material material;
+  Material *material;
   AABB bbox;
 } Quad;
 
-void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material mat);
-Hittable *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material mat);
-Hittable *Box_new(Vec3 a, Vec3 b, Material mat);
+void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material *mat);
+Hittable *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material *mat);
+Hittable *Box_new(Vec3 a, Vec3 b, Material *mat);
 
 typedef struct BVHNode {
   Hittable hittable;
@@ -103,7 +103,7 @@ typedef struct ConstantMedium {
   Hittable hittable;
   Hittable *boundary;
   float neg_inv_density;
-  Material phase_fn;
+  Material *phase_fn;
 } ConstantMedium;
 
 void ConstantMedium_init(ConstantMedium *self, Hittable *boundary, float density, Texture *albedo);

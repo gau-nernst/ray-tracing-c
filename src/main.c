@@ -4,24 +4,20 @@
 #include <time.h>
 
 void scene_metal_and_lambertian(World *world, Camera *camera) {
-  World_init(world, 4, 4);
+  World_init(world, 4);
 
-  Material mat;
+  Material *mat;
 
-  mat = material(Lambertian_new(Solid_new(vec3(0.8, 0.8, 0.0))));
-  MaterialList_append(&world->materials, mat);
+  mat = Lambertian_new(Solid_new(vec3(0.8, 0.8, 0.0)));
   HittableList_append(&world->objects, Sphere_new(vec3(0, -100.5, -1), 100, mat));
 
-  mat = material(Lambertian_new(Solid_new(vec3(0.7, 0.3, 0.3))));
-  MaterialList_append(&world->materials, mat);
+  mat = Lambertian_new(Solid_new(vec3(0.7, 0.3, 0.3)));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 0, -1), 0.5, mat));
 
-  mat = material(Metal_new(Solid_new(vec3(0.8, 0.8, 0.8)), 0.3));
-  MaterialList_append(&world->materials, mat);
+  mat = Metal_new(Solid_new(vec3(0.8, 0.8, 0.8)), 0.3);
   HittableList_append(&world->objects, Sphere_new(vec3(-1, 0, -1), 0.5, mat));
 
-  mat = material(Metal_new(Solid_new(vec3(0.8, 0.6, 0.2)), 1.0));
-  MaterialList_append(&world->materials, mat);
+  mat = Metal_new(Solid_new(vec3(0.8, 0.6, 0.2)), 1.0);
   HittableList_append(&world->objects, Sphere_new(vec3(1, 0, -1), 0.5, mat));
 
   camera->vfov = 90.0f;
@@ -31,25 +27,20 @@ void scene_metal_and_lambertian(World *world, Camera *camera) {
 }
 
 void scene_book1_final(World *world, Camera *camera) {
-  size_t max_spheres = 4 + 22 * 22;
-  World_init(world, max_spheres, max_spheres);
+  World_init(world, 4 + 22 * 22);
 
-  Material mat;
+  Material *mat;
 
-  mat = material(Lambertian_new(Solid_new(vec3(0.5, 0.5, 0.5))));
-  MaterialList_append(&world->materials, mat);
+  mat = Lambertian_new(Solid_new(vec3(0.5, 0.5, 0.5)));
   HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, -1), 1000, mat));
 
-  mat = material(Dielectric_new(Solid_new(vec3(1, 1, 1)), 1.5));
-  MaterialList_append(&world->materials, mat);
+  mat = Dielectric_new(Solid_new(vec3(1, 1, 1)), 1.5);
   HittableList_append(&world->objects, Sphere_new(vec3(0, 1, 0), 1, mat));
 
-  mat = material(Lambertian_new(Solid_new(vec3(0.4, 0.2, 0.1))));
-  MaterialList_append(&world->materials, mat);
+  mat = Lambertian_new(Solid_new(vec3(0.4, 0.2, 0.1)));
   HittableList_append(&world->objects, Sphere_new(vec3(-4, 1, 0), 1, mat));
 
-  mat = material(Metal_new(Solid_new(vec3(0.7, 0.6, 0.5)), 0));
-  MaterialList_append(&world->materials, mat);
+  mat = Metal_new(Solid_new(vec3(0.7, 0.6, 0.5)), 0);
   HittableList_append(&world->objects, Sphere_new(vec3(4, 1, 0), 1, mat));
 
   PCG32State rng;
@@ -68,16 +59,15 @@ void scene_book1_final(World *world, Camera *camera) {
 
         if (choose_material < 0.8f) {
           color = vec3_mul(vec3_rand(&rng), vec3_rand(&rng));
-          mat = material(Lambertian_new(Solid_new(color)));
+          mat = Lambertian_new(Solid_new(color));
         } else if (choose_material < 0.95f) {
           color = vec3_rand_between(&rng, 0.5f, 1);
-          mat = material(Metal_new(Solid_new(color), pcg32_f32(&rng) * 0.5f));
+          mat = Metal_new(Solid_new(color), pcg32_f32(&rng) * 0.5f);
         } else {
           color = vec3(1, 1, 1);
-          mat = material(Dielectric_new(Solid_new(color), 1.5f));
+          mat = Dielectric_new(Solid_new(color), 1.5f);
         }
 
-        MaterialList_append(&world->materials, mat);
         HittableList_append(&world->objects, Sphere_new(center, radius, mat));
       }
     }
@@ -95,12 +85,10 @@ void scene_book1_final(World *world, Camera *camera) {
 }
 
 void scene_checker(World *world, Camera *camera) {
-  World_init(world, 2, 1);
+  World_init(world, 2);
 
   Texture *checker_p = Checker_new(0.01f, Solid_new(vec3(0.2, 0.3, 0.1)), Solid_new(vec3(0.9, 0.9, 0.9)));
-  Material mat = material(Lambertian_new(checker_p));
-  MaterialList_append(&world->materials, mat);
-
+  Material *mat = Lambertian_new(checker_p);
   HittableList_append(&world->objects, Sphere_new(vec3(0, -10, 0), 10, mat));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 10, 0), 10, mat));
 
@@ -111,10 +99,9 @@ void scene_checker(World *world, Camera *camera) {
 }
 
 void scene_earth(World *world, Camera *camera) {
-  World_init(world, 1, 1);
+  World_init(world, 1);
 
-  Material mat = material(Lambertian_new(Image_new("earthmap.jpg")));
-  MaterialList_append(&world->materials, mat);
+  Material *mat = Lambertian_new(Image_new("earthmap.jpg"));
   HittableList_append(&world->objects, Sphere_new(VEC3_ZERO, 2, mat));
 
   camera->vfov = 20.0f;
@@ -124,14 +111,12 @@ void scene_earth(World *world, Camera *camera) {
 }
 
 void scene_perlin(World *world, Camera *camera) {
-  World_init(world, 2, 1);
+  World_init(world, 2);
 
   PCG32State rng;
   pcg32_seed(&rng, 19, 29);
 
-  Material mat = material(Lambertian_new(Perlin_new(4.0f, 7, &rng)));
-  MaterialList_append(&world->materials, mat);
-
+  Material *mat = Lambertian_new(Perlin_new(4.0f, 7, &rng));
   HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, 0), 1000, mat));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 2, 0), 2, mat));
 
@@ -144,17 +129,13 @@ void scene_perlin(World *world, Camera *camera) {
 }
 
 void scene_simple_light(World *world, Camera *camera) {
-  World_init(world, 4, 2);
+  World_init(world, 4);
 
   PCG32State rng;
   pcg32_seed(&rng, 19, 29);
 
-  Material perlin = material(Lambertian_new(Perlin_new(4.0f, 7, &rng)));
-  Material light = material(DiffuseLight_new(Solid_new(vec3(4, 4, 4))));
-
-  MaterialList_append(&world->materials, perlin);
-  MaterialList_append(&world->materials, light);
-
+  Material *perlin = Lambertian_new(Perlin_new(4.0f, 7, &rng));
+  Material *light = DiffuseLight_new(Solid_new(vec3(4, 4, 4)));
   HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, 0), 1000, perlin));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 2, 0), 2, perlin));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 7, 0), 2, light));
@@ -167,17 +148,12 @@ void scene_simple_light(World *world, Camera *camera) {
 }
 
 void scene_cornell_box(World *world, Camera *camera) {
-  World_init(world, 6 + 2, 4);
+  World_init(world, 6 + 2);
 
-  Material red = material(Lambertian_new(Solid_new(vec3(0.65, 0.05, 0.05))));
-  Material white = material(Lambertian_new(Solid_new(vec3(0.73, 0.73, 0.73))));
-  Material green = material(Lambertian_new(Solid_new(vec3(0.12, 0.45, 0.15))));
-  Material light = material(DiffuseLight_new(Solid_new(vec3(15, 15, 15))));
-
-  MaterialList_append(&world->materials, red);
-  MaterialList_append(&world->materials, white);
-  MaterialList_append(&world->materials, green);
-  MaterialList_append(&world->materials, light);
+  Material *red = Lambertian_new(Solid_new(vec3(0.65, 0.05, 0.05)));
+  Material *white = Lambertian_new(Solid_new(vec3(0.73, 0.73, 0.73)));
+  Material *green = Lambertian_new(Solid_new(vec3(0.12, 0.45, 0.15)));
+  Material *light = DiffuseLight_new(Solid_new(vec3(15, 15, 15)));
 
   HittableList_append(&world->objects, Quad_new(vec3(555, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), green));
   HittableList_append(&world->objects, Quad_new(vec3(0, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), red));
@@ -204,15 +180,13 @@ void scene_cornell_box(World *world, Camera *camera) {
 }
 
 void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
+  World_init(world, 11);
+
   PCG32State rng;
   pcg32_seed(&rng, 19, 29);
 
-  World_init(world, 11, 10);
-
-  Material ground = material(Lambertian_new(Solid_new(vec3(0.48, 0.83, 0.53))));
-  MaterialList_append(&world->materials, ground);
-
   int boxes_per_side = 20;
+  Material *ground = Lambertian_new(Solid_new(vec3(0.48, 0.83, 0.53)));
   HittableList *boxes1_list = (HittableList *)HittableList_new(boxes_per_side * boxes_per_side);
   for (int i = 0; i < boxes_per_side; i++)
     for (int j = 0; j < boxes_per_side; j++) {
@@ -231,22 +205,18 @@ void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
     boxes1 = (Hittable *)boxes1_list;
   HittableList_append(&world->objects, boxes1);
 
-  Material light = material(DiffuseLight_new(Solid_new(vec3(7, 7, 7))));
-  MaterialList_append(&world->materials, light);
+  Material *light = DiffuseLight_new(Solid_new(vec3(7, 7, 7)));
   HittableList_append(&world->objects, Quad_new(vec3(123, 554, 147), vec3(300, 0, 0), vec3(0, 0, 265), light));
 
   Vec3 center1 = vec3(400, 400, 200);
   // Vec3 center2 = {430, 400, 200}; // TODO: moving sphere
-  Material sphere_mat = material(Lambertian_new(Solid_new(vec3(0.7, 0.3, 0.1))));
-  MaterialList_append(&world->materials, sphere_mat);
+  Material *sphere_mat = Lambertian_new(Solid_new(vec3(0.7, 0.3, 0.1)));
   HittableList_append(&world->objects, Sphere_new(center1, 50, sphere_mat));
 
-  Material glass = material(Dielectric_new(Solid_new(vec3(1, 1, 1)), 1.5));
-  MaterialList_append(&world->materials, glass);
+  Material *glass = Dielectric_new(Solid_new(vec3(1, 1, 1)), 1.5);
   HittableList_append(&world->objects, Sphere_new(vec3(260, 150, 45), 50, glass));
 
-  Material metal = material(Metal_new(Solid_new(vec3(0.8, 0.8, 0.9)), 1.0));
-  MaterialList_append(&world->materials, metal);
+  Material *metal = Metal_new(Solid_new(vec3(0.8, 0.8, 0.9)), 1.0);
   HittableList_append(&world->objects, Sphere_new(vec3(0, 150, 145), 50, metal));
 
   // subsurface material
@@ -258,18 +228,14 @@ void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   boundary = Sphere_new(vec3(0, 0, 0), 5000, glass);
   HittableList_append(&world->objects, ConstantMedium_new(boundary, 0.0001, Solid_new(vec3(1, 1, 1))));
 
-  Material earth = material(Lambertian_new(Image_new("earthmap.jpg")));
-  MaterialList_append(&world->materials, earth);
+  Material *earth = Lambertian_new(Image_new("earthmap.jpg"));
   HittableList_append(&world->objects, Sphere_new(vec3(400, 200, 400), 100, earth));
 
-  Material perlin = material(Lambertian_new(Perlin_new(0.1, 7, &rng)));
-  MaterialList_append(&world->materials, perlin);
+  Material *perlin = Lambertian_new(Perlin_new(0.1, 7, &rng));
   HittableList_append(&world->objects, Sphere_new(vec3(220, 280, 300), 80, perlin));
 
-  Material white = material(Lambertian_new(Solid_new(vec3(0.73, 0.73, 0.73))));
-  MaterialList_append(&world->materials, white);
-
   int ns = 1000;
+  Material *white = Lambertian_new(Solid_new(vec3(0.73, 0.73, 0.73)));
   HittableList *boxes2_list = (HittableList *)HittableList_new(ns);
   for (int i = 0; i < ns; i++) {
     Vec3 center = vec3_rand_between(&rng, 0, 165);
