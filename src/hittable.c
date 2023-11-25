@@ -37,14 +37,20 @@ static AABB AABB_pad(AABB bbox) {
 
 // for use with qsort()
 typedef int (*Comparator)(const void *, const void *);
-static int Hittable_compare_bbox(const Hittable **a, const Hittable **b, int axis) {
-  float a_ = (*a)->bbox(*a).values[axis][0];
-  float b_ = (*b)->bbox(*b).values[axis][0];
+static int Hittable_compare_bbox(const Hittable *a, const Hittable *b, int axis) {
+  float a_ = a->bbox(a).values[axis][0];
+  float b_ = b->bbox(b).values[axis][0];
   return (a_ < b_) ? -1 : (a_ > b_) ? 1 : 0;
 }
-static int Hittable_compare_bbox_x(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 0); }
-static int Hittable_compare_bbox_y(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 1); }
-static int Hittable_compare_bbox_z(const void *a, const void *b) { return Hittable_compare_bbox(a, b, 2); }
+static int Hittable_compare_bbox_x(const void *a, const void *b) {
+  return Hittable_compare_bbox(*(Hittable **)a, *(Hittable **)b, 0);
+}
+static int Hittable_compare_bbox_y(const void *a, const void *b) {
+  return Hittable_compare_bbox(*(Hittable **)a, *(Hittable **)b, 1);
+}
+static int Hittable_compare_bbox_z(const void *a, const void *b) {
+  return Hittable_compare_bbox(*(Hittable **)a, *(Hittable **)b, 2);
+}
 
 static HittableHitFn HittableList_hit;
 static AABB HittableList_bbox(const Hittable *self_) { return ((HittableList *)self_)->bbox; }
@@ -205,7 +211,7 @@ static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32State 
     self->left = list[0];
     self->right = list[0];
   } else if (n == 2) {
-    if (Hittable_compare_bbox(list, list + 1, axis) < 0) {
+    if (Hittable_compare_bbox(list[0], list[1], axis) < 0) {
       self->left = list[0];
       self->right = list[1];
     } else {
