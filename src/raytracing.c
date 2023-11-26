@@ -47,10 +47,11 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     if (!rec.material->vtable->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, &pdf, rng))
       return emission_color;
 
+    // mixture pdf
     if (world->light != NULL) {
-      // change scatter ray towards the light
-      new_ray.direction = world->light->vtable->rand(world->light, rec.p, rng);
-      pdf = world->light->vtable->pdf(world->light, &new_ray, rng);
+      if (pcg32_f32(rng) < 0.5f) // change scatter ray towards the light half of the time
+        new_ray.direction = world->light->vtable->rand(world->light, rec.p, rng);
+      pdf = 0.5f * pdf + 0.5f * world->light->vtable->pdf(world->light, &new_ray, rng); // update pdf
     }
 
     // spawn new ray
