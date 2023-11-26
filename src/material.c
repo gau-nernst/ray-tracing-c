@@ -4,8 +4,13 @@
 #include <math.h>
 #include <stdlib.h>
 
-static Vec3 _Texture_value(Texture *texture, HitRecord *rec) { return texture->value(texture, rec->u, rec->v, rec->p); }
-static Vec3 Material_emit(HitRecord *rec) { return VEC3_ZERO; }
+static Vec3 _Texture_value(const Texture *texture, const HitRecord *rec) {
+  return texture->value(texture, rec->u, rec->v, rec->p);
+}
+static bool Material_scatter(const HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
+  return false;
+}
+static Vec3 Material_emit(const HitRecord *rec) { return VEC3_ZERO; }
 
 #define define_material_new(Type, ...)                                                                                 \
   {                                                                                                                    \
@@ -14,7 +19,7 @@ static Vec3 Material_emit(HitRecord *rec) { return VEC3_ZERO; }
     return obj;                                                                                                        \
   }
 
-static bool SurfaceNormal_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
+static bool SurfaceNormal_scatter(const HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   *color = vec3float_mul(vec3_add(rec->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
   return false;
 }
@@ -24,7 +29,7 @@ void SurfaceNormal_init(Material *self) {
 }
 Material *SurfaceNormal_new() define_material_new(SurfaceNormal);
 
-static bool Lambertian_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
+static bool Lambertian_scatter(const HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   *scattered = vec3_add(rec->normal, vec3_rand_unit_vector(rng));
   if (vec3_near_zero(*scattered)) // remove degenerate rays
     *scattered = rec->normal;
@@ -41,7 +46,7 @@ Material *Lambertian_new(Texture *albedo) define_material_new(Lambertian, albedo
 static Vec3 reflect(Vec3 incident, Vec3 normal) {
   return vec3_sub(incident, vec3_mul(normal, 2.0f * vec3_dot(incident, normal)));
 }
-static bool Metal_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
+static bool Metal_scatter(const HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   Vec3 reflected = reflect(vec3_normalize(incident), rec->normal);
   *scattered = vec3_add(reflected, vec3_mul(vec3_rand_unit_vector(rng), rec->material->fuzz));
   *color = _Texture_value(rec->material->albedo, rec);
@@ -55,7 +60,7 @@ void Metal_init(Material *self, Texture *albedo, float fuzz) {
 }
 Material *Metal_new(Texture *albedo, float fuzz) define_material_new(Metal, albedo, fuzz);
 
-static bool Dielectric_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
+static bool Dielectric_scatter(const HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   float eta = rec->material->eta;
   if (rec->front_face)
     eta = 1.0f / eta;
@@ -86,18 +91,15 @@ void Dielectric_init(Material *self, float eta) {
 }
 Material *Dielectric_new(float eta) define_material_new(Dielectric, eta);
 
-static bool DiffuseLight_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
-  return false;
-}
-static Vec3 DiffuseLight_emit(HitRecord *rec) { return _Texture_value(rec->material->albedo, rec); }
+static Vec3 DiffuseLight_emit(const HitRecord *rec) { return _Texture_value(rec->material->albedo, rec); }
 void DiffuseLight_init(Material *self, Texture *albedo) {
-  self->scatter = DiffuseLight_scatter;
+  self->scatter = Material_scatter;
   self->emit = DiffuseLight_emit;
   self->albedo = albedo;
 }
 Material *DiffuseLight_new(Texture *albedo) define_material_new(DiffuseLight, albedo);
 
-static bool Isotropic_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
+static bool Isotropic_scatter(const HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   *scattered = vec3_rand_unit_vector(rng);
   *color = _Texture_value(rec->material->albedo, rec);
   return true;

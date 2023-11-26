@@ -4,7 +4,7 @@
 
 typedef struct Texture Texture;
 struct Texture {
-  Vec3 (*value)(Texture *self, float u, float v, Vec3 p);
+  Vec3 (*value)(const Texture *self, float u, float v, Vec3 p);
 };
 
 typedef struct Solid {

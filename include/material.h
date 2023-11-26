@@ -8,10 +8,12 @@
 
 typedef struct Material Material;
 typedef struct HitRecord HitRecord;
+typedef struct Ray Ray;
 
 struct Material {
-  bool (*scatter)(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color);
-  Vec3 (*emit)(HitRecord *rec);
+  bool (*scatter)(const HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color);
+  Vec3 (*emit)(const HitRecord *rec);
+  float (*scattering_pdf)(const HitRecord *rec, const Ray *r_in, const Ray *r_out);
   Texture *albedo;
   union {
     float fuzz; // for metal
