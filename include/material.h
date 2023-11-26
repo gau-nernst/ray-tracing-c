@@ -11,9 +11,9 @@ typedef struct HitRecord HitRecord;
 typedef struct Ray Ray;
 
 struct Material {
-  bool (*scatter)(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, PCG32 *rng);
-  Vec3 (*emit)(const HitRecord *rec);
+  bool (*scatter)(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, float *pdf, PCG32 *rng);
   float (*scattering_pdf)(const HitRecord *rec, Vec3 r_in, Vec3 r_out);
+  Vec3 (*emit)(const HitRecord *rec);
   Texture *albedo;
   union {
     float fuzz; // for metal
@@ -54,7 +54,7 @@ typedef struct ONB {
   Vec3 v;
   Vec3 w;
 } ONB;
-Vec3 ONB_local(const ONB *self, float u, float v, float w);
+Vec3 ONB_local(const ONB *self, Vec3 a);
 void ONB_from_w(ONB *self, Vec3 w);
 
 #endif // MATERIAL_H

@@ -1,4 +1,5 @@
 #include "raytracing.h"
+#include "pcg32.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -40,17 +41,32 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     Ray new_ray;
     new_ray.origin = rec.p;
     Vec3 attenuation;
+    float pdf;
     Vec3 emission_color = rec.material->emit(&rec);
 
-    if (!rec.material->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, rng))
+    if (!rec.material->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, &pdf, rng))
       return emission_color;
 
-    float scattering_pdf = rec.material->scattering_pdf(&rec, ray->direction, new_ray.direction);
-    float sampling_pdf = scattering_pdf;
+    // randomly sample a point on the light source
+    Vec3 on_light = vec3(pcg32_f32_between(rng, 213, 343), 554, pcg32_f32_between(rng, 227, 332));
+    Vec3 to_light = vec3_sub(on_light, rec.p);
 
-    // Vec3 scatter_color = vec3_mul(attenuation, Camera_ray_color(camera, &new_ray, world, depth - 1, rng)); // spawn new ray
+    if (vec3_dot(to_light, rec.normal) < 0)
+      return emission_color;
+
+    float light_cosine = fabsf(vec3_normalize(to_light).y); // wrt up direction
+    if (light_cosine < 0.000001f)
+      return emission_color;
+
+    float d2 = vec3_length2(to_light);
+    float light_area = (343.0f - 213.0f) * (332.0f - 227.0f);
+    pdf = d2 / (light_cosine * light_area);
+    new_ray.direction = to_light;
+
+    // spawn new ray
     Vec3 new_color = Camera_ray_color(camera, &new_ray, world, depth - 1, rng);
-    Vec3 scatter_color = vec3_mul(attenuation, scattering_pdf, new_color, 1.0f / sampling_pdf);
+    float scattering_pdf = rec.material->scattering_pdf(&rec, ray->direction, new_ray.direction);
+    Vec3 scatter_color = vec3_mul(attenuation, scattering_pdf, new_color, 1.0f / pdf);
     return vec3_add(scatter_color, emission_color);
   }
 
