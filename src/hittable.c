@@ -56,8 +56,8 @@ static bool AABB_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max)
 // for use with qsort()
 typedef int (*Comparator)(const void *, const void *);
 static int Hittable_compare_bbox(const Hittable *a, const Hittable *b, int axis) {
-  float a_ = a->vtable->bbox(a).values[axis][0];
-  float b_ = b->vtable->bbox(b).values[axis][0];
+  float a_ = a->bbox.values[axis][0];
+  float b_ = b->bbox.values[axis][0];
   return (a_ < b_) ? -1 : (a_ > b_) ? 1 : 0;
 }
 static int Hittable_compare_bbox_x(const void *a, const void *b) {
@@ -85,17 +85,16 @@ static bool HittableList_hit(const Hittable *self_, const Ray *ray, float t_min,
 
   return hit_anything;
 }
-static AABB HittableList_bbox(const Hittable *self_) { return ((HittableList *)self_)->bbox; }
-static HittableVTable HITTABLE_LIST_VTABLE = {HittableList_hit, HittableList_bbox};
+static HittableVTable HITTABLE_LIST_VTABLE = {HittableList_hit};
 void HittableList_init(HittableList *self, size_t max_size) {
   *self =
-      (HittableList){{&HITTABLE_LIST_VTABLE}, max_size, 0, my_malloc(sizeof(self->items[0]) * max_size), AABB_EMPTY};
+      (HittableList){{&HITTABLE_LIST_VTABLE, AABB_EMPTY}, max_size, 0, my_malloc(sizeof(self->items[0]) * max_size)};
 }
 Hittable *HittableList_new(size_t max_size) define_init_new(HittableList, max_size);
 void HittableList_append(HittableList *self, Hittable *item) {
   assert((self->size < self->max_size) && "List is full");
   self->items[self->size++] = item;
-  self->bbox = AABB_from_AABB(self->bbox, item->vtable->bbox(item));
+  self->hittable.bbox = AABB_from_AABB(self->hittable.bbox, item->bbox);
 }
 
 static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
@@ -130,11 +129,10 @@ static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float
 
   return true;
 }
-static AABB Sphere_bbox(const Hittable *self_) { return ((Sphere *)self_)->bbox; }
-static HittableVTable SPHERE_VTABLE = {Sphere_hit, Sphere_bbox};
+static HittableVTable SPHERE_VTABLE = {Sphere_hit};
 void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material *mat) {
-  *sphere = (Sphere){
-      {&SPHERE_VTABLE}, center, radius, mat, AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius))};
+  AABB bbox = AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius));
+  *sphere = (Sphere){{&SPHERE_VTABLE, bbox}, center, radius, mat};
 }
 Hittable *Sphere_new(Vec3 center, float radius, Material *mat) define_init_new(Sphere, center, radius, mat);
 
@@ -167,15 +165,14 @@ static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t
 
   return true;
 }
-static AABB Quad_bbox(const Hittable *self_) { return ((Quad *)self_)->bbox; }
-static HittableVTable QUAD_VTABLE = {Quad_hit, Quad_bbox};
+static HittableVTable QUAD_VTABLE = {Quad_hit};
 void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material *mat) {
   self->hittable.vtable = &QUAD_VTABLE;
+  self->hittable.bbox = AABB_pad(AABB_from_Vec3(Q, vec3_add(Q, u, v)));
   self->Q = Q;
   self->u = u;
   self->v = v;
   self->material = mat;
-  self->bbox = AABB_pad(AABB_from_Vec3(Q, vec3_add(Q, u, v)));
 
   Vec3 n = vec3_cross(u, v);
   self->normal = vec3_normalize(n);
@@ -206,7 +203,7 @@ Hittable *Box_new(Vec3 a, Vec3 b, Material *mat) {
 
 static bool BVHNode_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
   BVHNode *self = (BVHNode *)self_;
-  if (!AABB_hit(&self->bbox, ray, t_min, t_max))
+  if (!AABB_hit(&self->hittable.bbox, ray, t_min, t_max))
     return false;
 
   // NOTE: we need to check for both left and right, since we don't know which one is closer.
@@ -216,8 +213,7 @@ static bool BVHNode_hit(const Hittable *self_, const Ray *ray, float t_min, floa
   bool hit_right = self->right->vtable->hit(self->right, ray, t_min, t_max, rec, rng);
   return hit_left || hit_right;
 }
-static AABB BVHNode_bbox(const Hittable *self_) { return ((BVHNode *)self_)->bbox; }
-static HittableVTable BVH_NODE_VTABLE = {BVHNode_hit, BVHNode_bbox};
+static HittableVTable BVH_NODE_VTABLE = {BVHNode_hit};
 static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32 *rng);
 void BVHNode_init(BVHNode *self, const HittableList *list, PCG32 *rng) {
   _BVHNode_init(self, list->items, list->size, rng);
@@ -261,7 +257,7 @@ static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32 *rng)
     self->right = (Hittable *)right;
   }
   free(list); // we don't need this anymore
-  self->bbox = AABB_from_AABB(self->left->vtable->bbox(self->left), self->right->vtable->bbox(self->right));
+  self->hittable.bbox = AABB_from_AABB(self->left->bbox, self->right->bbox);
 }
 
 static bool Translate_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
@@ -274,16 +270,15 @@ static bool Translate_hit(const Hittable *self_, const Ray *ray, float t_min, fl
   rec->p = vec3_add(rec->p, self->offset);
   return true;
 }
-static AABB Translate_bbox(const Hittable *self) { return ((Translate *)self)->bbox; }
-static HittableVTable TRANSLATE_VTABLE = {Translate_hit, Translate_bbox};
+static HittableVTable TRANSLATE_VTABLE = {Translate_hit};
 void Translate_init(Translate *self, Hittable *object, Vec3 offset) {
-  AABB bbox = object->vtable->bbox(object);
+  AABB bbox = object->bbox;
   for (int i = 0; i < 2; i++) {
     bbox.x[i] += offset.x;
     bbox.y[i] += offset.y;
     bbox.z[i] += offset.z;
   }
-  *self = (Translate){{&TRANSLATE_VTABLE}, object, offset, bbox};
+  *self = (Translate){{&TRANSLATE_VTABLE, bbox}, object, offset};
 }
 Hittable *Translate_new(Hittable *object, Vec3 offset) define_init_new(Translate, object, offset);
 
@@ -308,14 +303,13 @@ static bool RotateY_hit(const Hittable *self_, const Ray *ray, float t_min, floa
   rec->normal = Vec3_rotate_y_inverse(rec->normal, self->cos_theta, self->sin_theta);
   return true;
 }
-static AABB RotateY_bbox(const Hittable *self) { return ((RotateY *)self)->bbox; }
-static HittableVTable ROTATE_Y_VTABLE = {RotateY_hit, RotateY_bbox};
+static HittableVTable ROTATE_Y_VTABLE = {RotateY_hit};
 void RotateY_init(RotateY *self, Hittable *object, float angle) {
   angle = angle * (float)M_PI / 180.f;
   float sin_theta = sinf(angle);
   float cos_theta = cosf(angle);
 
-  AABB bbox = object->vtable->bbox(object);
+  AABB bbox = object->bbox;
   Vec3 min_p = vec3(INFINITY, INFINITY, INFINITY);
   Vec3 max_p = vec3(-INFINITY, -INFINITY, -INFINITY);
   for (int i = 0; i < 2; i++)
@@ -329,7 +323,7 @@ void RotateY_init(RotateY *self, Hittable *object, float angle) {
         max_p = vec3_max(max_p, tester);
       }
 
-  *self = (RotateY){{&ROTATE_Y_VTABLE}, object, sin_theta, cos_theta, AABB_from_Vec3(min_p, max_p)};
+  *self = (RotateY){{&ROTATE_Y_VTABLE, AABB_from_Vec3(min_p, max_p)}, object, sin_theta, cos_theta};
 }
 Hittable *RotateY_new(Hittable *object, float angle) define_init_new(RotateY, object, angle);
 
@@ -365,14 +359,10 @@ static bool ConstantMedium_hit(const Hittable *self_, const Ray *ray, float t_mi
   rec->material = self->phase_fn;
   return true;
 }
-static AABB ConstantMedium_bbox(const Hittable *self) {
-  Hittable *boundary = ((ConstantMedium *)self)->boundary;
-  return boundary->vtable->bbox(boundary);
-}
-static HittableVTable CONSTANT_MEDIUM_VTABLE = {ConstantMedium_hit, ConstantMedium_bbox};
+static HittableVTable CONSTANT_MEDIUM_VTABLE = {ConstantMedium_hit};
 void ConstantMedium_init(ConstantMedium *self, Hittable *boundary, float density, Texture *albedo) {
   *self = (ConstantMedium){
-      {&CONSTANT_MEDIUM_VTABLE},
+      {&CONSTANT_MEDIUM_VTABLE, boundary->bbox},
       boundary,
       -1.0f / density,
       Isotropic_new(albedo),
