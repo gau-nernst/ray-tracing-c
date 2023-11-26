@@ -22,10 +22,13 @@ typedef union AABB {
 } AABB;
 
 typedef struct Hittable Hittable;
-typedef bool HittableHitFn(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng);
-struct Hittable {
-  HittableHitFn *hit;
+typedef struct HittableVTable {
+  bool (*hit)(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng);
   AABB (*bbox)(const Hittable *self);
+} HittableVTable;
+
+struct Hittable {
+  HittableVTable *vtable;
 };
 
 typedef struct HittableList {

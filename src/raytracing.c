@@ -37,7 +37,7 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
 
   HitRecord rec;
   const Hittable *objects = &world->objects.hittable;
-  if (objects->hit(objects, ray, 1e-3f, INFINITY, &rec, rng)) {
+  if (objects->vtable->hit(objects, ray, 1e-3f, INFINITY, &rec, rng)) {
     Ray new_ray;
     new_ray.origin = rec.p;
     Vec3 attenuation;
