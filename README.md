@@ -32,6 +32,12 @@ cl /Iinclude /Zc:preprocessor /std:c11 /O2 /fp:fast /openmp /Femain.exe src/*.c 
 ./main.exe 0
 ```
 
+## Gallery
+
+Book 1 final scene. 2min 34s on Macbook Air M1, plugged in, with OpenMP and BVH. 1200x675. 1000 samples/pixel. max depth 50.
+
+![Book 1 final scene](images/book1_final.png)
+
 ## Learnings
 
 - Implement `Vec3`:
