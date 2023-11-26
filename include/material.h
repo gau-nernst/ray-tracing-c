@@ -10,10 +10,14 @@ typedef struct Material Material;
 typedef struct HitRecord HitRecord;
 typedef struct Ray Ray;
 
-struct Material {
+typedef struct MaterialVTable {
   bool (*scatter)(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, float *pdf, PCG32 *rng);
   float (*scattering_pdf)(const HitRecord *rec, Vec3 r_in, Vec3 r_out);
   Vec3 (*emit)(const HitRecord *rec);
+} MaterialVTable;
+
+struct Material {
+  MaterialVTable *vtable;
   Texture *albedo;
   union {
     float fuzz; // for metal

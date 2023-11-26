@@ -42,9 +42,9 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     new_ray.origin = rec.p;
     Vec3 attenuation;
     float pdf;
-    Vec3 emission_color = rec.material->emit(&rec);
+    Vec3 emission_color = rec.material->vtable->emit(&rec);
 
-    if (!rec.material->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, &pdf, rng))
+    if (!rec.material->vtable->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, &pdf, rng))
       return emission_color;
 
     // randomly sample a point on the light source
@@ -65,7 +65,7 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
 
     // spawn new ray
     Vec3 new_color = Camera_ray_color(camera, &new_ray, world, depth - 1, rng);
-    float scattering_pdf = rec.material->scattering_pdf(&rec, ray->direction, new_ray.direction);
+    float scattering_pdf = rec.material->vtable->scattering_pdf(&rec, ray->direction, new_ray.direction);
     Vec3 scatter_color = vec3_mul(attenuation, scattering_pdf, new_color, 1.0f / pdf);
     return vec3_add(scatter_color, emission_color);
   }

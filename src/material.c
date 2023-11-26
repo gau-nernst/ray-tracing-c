@@ -24,10 +24,8 @@ static bool SurfaceNormal_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, 
   *color = vec3float_mul(vec3_add(rec->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
   return false;
 }
-void SurfaceNormal_init(Material *self) {
-  self->scatter = SurfaceNormal_scatter;
-  self->emit = Material_emit;
-}
+static MaterialVTable SURFACE_NORMAL_VTABLE = {SurfaceNormal_scatter, NULL, Material_emit};
+void SurfaceNormal_init(Material *self) { self->vtable = &SURFACE_NORMAL_VTABLE; }
 Material *SurfaceNormal_new() define_material_new(SurfaceNormal);
 
 // sample from p(theta) = cos(theta) / pi, 0 <= theta <= pi/2
@@ -50,10 +48,9 @@ static float Lambertian_scattering_pdf(const HitRecord *rec, Vec3 r_in, Vec3 r_o
   float cos_theta = vec3_dot(rec->normal, vec3_normalize(r_out));
   return cos_theta < 0.0f ? 0.0f : cos_theta / (float)M_PI;
 }
+static MaterialVTable LAMBERTIAN_VTABLE = {Lambertian_scatter, Lambertian_scattering_pdf, Material_emit};
 void Lambertian_init(Material *self, Texture *albedo) {
-  self->scatter = Lambertian_scatter;
-  self->emit = Material_emit;
-  self->scattering_pdf = Lambertian_scattering_pdf;
+  self->vtable = &LAMBERTIAN_VTABLE;
   self->albedo = albedo;
 }
 Material *Lambertian_new(Texture *albedo) define_material_new(Lambertian, albedo);
@@ -67,9 +64,9 @@ static bool Metal_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *co
   *color = _Texture_value(rec);
   return vec3_dot(*r_out, rec->normal) > 0.0f; // check for degeneration
 }
+static MaterialVTable METAL_VTABLE = {Metal_scatter, NULL, Material_emit};
 void Metal_init(Material *self, Texture *albedo, float fuzz) {
-  self->scatter = Metal_scatter;
-  self->emit = Material_emit;
+  self->vtable = &METAL_VTABLE;
   self->albedo = albedo;
   self->fuzz = fuzz;
 }
@@ -99,17 +96,17 @@ static bool Dielectric_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec
   *color = vec3(1, 1, 1);
   return true;
 }
+static MaterialVTable DIELECTRIC_VTABLE = {Dielectric_scatter, NULL, Material_emit};
 void Dielectric_init(Material *self, float eta) {
-  self->scatter = Dielectric_scatter;
-  self->emit = Material_emit;
+  self->vtable = &DIELECTRIC_VTABLE;
   self->eta = eta;
 }
 Material *Dielectric_new(float eta) define_material_new(Dielectric, eta);
 
 static Vec3 DiffuseLight_emit(const HitRecord *rec) { return rec->front_face ? _Texture_value(rec) : VEC3_ZERO; }
+static MaterialVTable DIFFUSE_LIGHT_VTABLE = {Material_scatter, NULL, DiffuseLight_emit};
 void DiffuseLight_init(Material *self, Texture *albedo) {
-  self->scatter = Material_scatter;
-  self->emit = DiffuseLight_emit;
+  self->vtable = &DIFFUSE_LIGHT_VTABLE;
   self->albedo = albedo;
 }
 Material *DiffuseLight_new(Texture *albedo) define_material_new(DiffuseLight, albedo);
@@ -119,9 +116,9 @@ static bool Isotropic_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3
   *color = _Texture_value(rec);
   return true;
 }
+static MaterialVTable ISOTROPIC_VTABLE = {Isotropic_scatter, NULL, Material_emit};
 void Isotropic_init(Material *self, Texture *albedo) {
-  self->scatter = Isotropic_scatter;
-  self->emit = Material_emit;
+  self->vtable = &ISOTROPIC_VTABLE;
   self->albedo = albedo;
 }
 Material *Isotropic_new(Texture *albedo) define_material_new(Isotropic, albedo);
