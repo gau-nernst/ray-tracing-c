@@ -11,9 +11,9 @@ typedef struct HitRecord HitRecord;
 typedef struct Ray Ray;
 
 struct Material {
-  bool (*scatter)(const HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color);
+  bool (*scatter)(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, PCG32 *rng);
   Vec3 (*emit)(const HitRecord *rec);
-  float (*scattering_pdf)(const HitRecord *rec, const Ray *r_in, const Ray *r_out);
+  float (*scattering_pdf)(const HitRecord *rec, Vec3 r_in, Vec3 r_out);
   Texture *albedo;
   union {
     float fuzz; // for metal
@@ -48,5 +48,13 @@ Material *DiffuseLight_new(Texture *albedo);
 
 void Isotropic_init(Material *self, Texture *albedo);
 Material *Isotropic_new(Texture *albedo);
+
+typedef struct ONB {
+  Vec3 u;
+  Vec3 v;
+  Vec3 w;
+} ONB;
+Vec3 ONB_local(const ONB *self, float u, float v, float w);
+void ONB_from_w(ONB *self, Vec3 w);
 
 #endif // MATERIAL_H

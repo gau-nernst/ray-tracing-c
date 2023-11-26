@@ -11,8 +11,12 @@
 #define vec3_add4(x, y, z, t) vec3_add2(vec3_add3(x, y, z), t)
 #define vec3_add(...) _GET_MACRO(__VA_ARGS__, vec3_add4, vec3_add3, vec3_add2)(__VA_ARGS__)
 
+#define vec3_mul2(x, y) _Generic((y), Vec3: vec3vec3_mul, float: vec3float_mul)(x, y)
+#define vec3_mul3(x, y, z) vec3_mul2(vec3_mul2(x, y), z)
+#define vec3_mul4(x, y, z, t) vec3_mul2(vec3_mul3(x, y, z), t)
+#define vec3_mul(...) _GET_MACRO(__VA_ARGS__, vec3_mul4, vec3_mul3, vec3_mul2)(__VA_ARGS__)
+
 #define vec3_sub(x, y) _Generic((y), Vec3: vec3vec3_sub, float: vec3float_sub)(x, y)
-#define vec3_mul(x, y) _Generic((y), Vec3: vec3vec3_mul, float: vec3float_mul)(x, y)
 #define vec3_div(x, y) _Generic((y), Vec3: vec3vec3_div, float: vec3float_div)(x, y)
 
 typedef union Vec3 {

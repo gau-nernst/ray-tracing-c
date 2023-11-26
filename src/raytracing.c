@@ -39,13 +39,18 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
   if (objects->hit(objects, ray, 1e-3f, INFINITY, &rec, rng)) {
     Ray new_ray;
     new_ray.origin = rec.p;
-    Vec3 scatter_color;
+    Vec3 attenuation;
     Vec3 emission_color = rec.material->emit(&rec);
 
-    if (!rec.material->scatter(&rec, ray->direction, rng, &new_ray.direction, &scatter_color))
+    if (!rec.material->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, rng))
       return emission_color;
 
-    scatter_color = vec3_mul(scatter_color, Camera_ray_color(camera, &new_ray, world, depth - 1, rng)); // spawn new ray
+    float scattering_pdf = rec.material->scattering_pdf(&rec, ray->direction, new_ray.direction);
+    float sampling_pdf = scattering_pdf;
+
+    // Vec3 scatter_color = vec3_mul(attenuation, Camera_ray_color(camera, &new_ray, world, depth - 1, rng)); // spawn new ray
+    Vec3 new_color = Camera_ray_color(camera, &new_ray, world, depth - 1, rng);
+    Vec3 scatter_color = vec3_mul(attenuation, scattering_pdf, new_color, 1.0f / sampling_pdf);
     return vec3_add(scatter_color, emission_color);
   }
 
