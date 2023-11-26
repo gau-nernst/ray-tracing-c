@@ -7,14 +7,14 @@
 static Vec3 _Texture_value(Texture *texture, HitRecord *rec) { return texture->value(texture, rec->u, rec->v, rec->p); }
 static Vec3 Material_emit(HitRecord *rec) { return VEC3_ZERO; }
 
-static bool SurfaceNormal_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool SurfaceNormal_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   *color = vec3float_mul(vec3_add(rec->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
   return false;
 }
 void SurfaceNormal_init(SurfaceNormal *self) { *self = (SurfaceNormal){SurfaceNormal_scatter, Material_emit}; }
 Material *SurfaceNormal_new() define_init_new(SurfaceNormal);
 
-static bool Lambertian_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool Lambertian_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   Lambertian *mat = (Lambertian *)rec->material;
   *scattered = vec3_add(rec->normal, vec3_rand_unit_vector(rng));
   if (vec3_near_zero(*scattered)) // remove degenerate rays
@@ -30,7 +30,7 @@ Material *Lambertian_new(Texture *albedo) define_init_new(Lambertian, albedo);
 static Vec3 reflect(Vec3 incident, Vec3 normal) {
   return vec3_sub(incident, vec3_mul(normal, 2.0f * vec3_dot(incident, normal)));
 }
-static bool Metal_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool Metal_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   Metal *mat = (Metal *)rec->material;
   Vec3 reflected = reflect(vec3_normalize(incident), rec->normal);
   *scattered = vec3_add(reflected, vec3_mul(vec3_rand_unit_vector(rng), mat->fuzz));
@@ -42,7 +42,7 @@ void Metal_init(Metal *self, Texture *albedo, float fuzz) {
 }
 Material *Metal_new(Texture *albedo, float fuzz) define_init_new(Metal, albedo, fuzz);
 
-static bool Dielectric_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool Dielectric_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   Dielectric *mat = (Dielectric *)rec->material;
   float eta = rec->front_face ? 1.0f / mat->eta : mat->eta;
   incident = vec3_normalize(incident);
@@ -70,7 +70,7 @@ void Dielectric_init(Dielectric *self, Texture *albedo, float eta) {
 }
 Material *Dielectric_new(Texture *albedo, float eta) define_init_new(Dielectric, albedo, eta);
 
-static bool DiffuseLight_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool DiffuseLight_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   return false;
 }
 static Vec3 DiffuseLight_emit(HitRecord *rec) {
@@ -82,7 +82,7 @@ void DiffuseLight_init(DiffuseLight *self, Texture *albedo) {
 }
 Material *DiffuseLight_new(Texture *albedo) define_init_new(DiffuseLight, albedo);
 
-static bool Isotropic_scatter(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color) {
+static bool Isotropic_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   Isotropic *mat = (Isotropic *)rec->material;
   *scattered = vec3_rand_unit_vector(rng);
   *color = _Texture_value(mat->albedo, rec);

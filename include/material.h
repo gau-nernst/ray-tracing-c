@@ -10,7 +10,7 @@ typedef struct Material Material;
 typedef struct HitRecord HitRecord;
 
 struct Material {
-  bool (*scatter)(HitRecord *rec, Vec3 incident, PCG32State *rng, Vec3 *scattered, Vec3 *color);
+  bool (*scatter)(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color);
   Vec3 (*emit)(HitRecord *rec);
 };
 

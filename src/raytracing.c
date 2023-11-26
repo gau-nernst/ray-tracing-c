@@ -30,7 +30,7 @@ void Camera_init(Camera *camera) {
   camera->dof_disc_v = vec3_mul(camera->v, dof_radius);
 }
 
-static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32State *rng) {
+static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *world, int depth, PCG32 *rng) {
   if (depth <= 0)
     return VEC3_ZERO;
 
@@ -68,7 +68,7 @@ void Camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
     int i; // C89 for loop for MSVC OpenMP
 #pragma omp parallel for private(i) schedule(static, 1)
     for (i = 0; i < camera->img_width; i++) {
-      PCG32State rng;
+      PCG32 rng;
       pcg32_seed(&rng, 17 + j, 23 + i);
 
       Vec3 pixel_pos = vec3_add(camera->pixel00_loc, vec3_mul(camera->pixel_delta_u, (float)i),

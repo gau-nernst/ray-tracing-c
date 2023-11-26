@@ -42,7 +42,7 @@ void Image_init(Image *image, char *filename) {
 }
 Texture *Image_new(char *filename) define_init_new(Image, filename);
 
-static void Perlin_permute(int perm[N_PERLIN], PCG32State *rng);
+static void Perlin_permute(int perm[N_PERLIN], PCG32 *rng);
 static float Perlin_turbulence(Perlin *perlin, Vec3 p);
 static Vec3 Perlin_value(Texture *self_, float u, float v, Vec3 p) {
   Perlin *self = (Perlin *)self_;
@@ -50,7 +50,7 @@ static Vec3 Perlin_value(Texture *self_, float u, float v, Vec3 p) {
   float value = 0.5f * (1.0f + sinf(p.z + 10.0f * Perlin_turbulence(self, p)));
   return vec3(value, value, value);
 }
-void Perlin_init(Perlin *perlin, float scale, int depth, PCG32State *rng) {
+void Perlin_init(Perlin *perlin, float scale, int depth, PCG32 *rng) {
   perlin->texture.value = Perlin_value;
   perlin->scale = scale;
   perlin->depth = depth;
@@ -60,9 +60,9 @@ void Perlin_init(Perlin *perlin, float scale, int depth, PCG32State *rng) {
   Perlin_permute(perlin->perm_y, rng);
   Perlin_permute(perlin->perm_z, rng);
 }
-Texture *Perlin_new(float scale, int depth, PCG32State *rng) define_init_new(Perlin, scale, depth, rng);
+Texture *Perlin_new(float scale, int depth, PCG32 *rng) define_init_new(Perlin, scale, depth, rng);
 
-static void Perlin_permute(int perm[N_PERLIN], PCG32State *rng) {
+static void Perlin_permute(int perm[N_PERLIN], PCG32 *rng) {
   for (int i = 0; i < N_PERLIN; i++)
     perm[i] = i;
   for (int i = N_PERLIN - 1; i > 0; i--) {

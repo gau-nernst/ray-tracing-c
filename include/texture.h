@@ -47,5 +47,5 @@ typedef struct Perlin {
   int perm_z[N_PERLIN];
 } Perlin;
 
-void Perlin_init(Perlin *self, float scale, int depth, PCG32State *rng);
-Texture *Perlin_new(float scale, int depth, PCG32State *rng);
+void Perlin_init(Perlin *self, float scale, int depth, PCG32 *rng);
+Texture *Perlin_new(float scale, int depth, PCG32 *rng);

@@ -43,7 +43,7 @@ void scene_book1_final(World *world, Camera *camera) {
   mat = Metal_new(Solid_new(vec3(0.7, 0.6, 0.5)), 0);
   HittableList_append(&world->objects, Sphere_new(vec3(4, 1, 0), 1, mat));
 
-  PCG32State rng;
+  PCG32 rng;
   pcg32_seed(&rng, 19, 29);
 
   Vec3 ref_point = vec3(4, 0.2, 0);
@@ -113,7 +113,7 @@ void scene_earth(World *world, Camera *camera) {
 void scene_perlin(World *world, Camera *camera) {
   World_init(world, 2);
 
-  PCG32State rng;
+  PCG32 rng;
   pcg32_seed(&rng, 19, 29);
 
   Material *mat = Lambertian_new(Perlin_new(4.0f, 7, &rng));
@@ -131,7 +131,7 @@ void scene_perlin(World *world, Camera *camera) {
 void scene_simple_light(World *world, Camera *camera) {
   World_init(world, 4);
 
-  PCG32State rng;
+  PCG32 rng;
   pcg32_seed(&rng, 19, 29);
 
   Material *perlin = Lambertian_new(Perlin_new(4.0f, 7, &rng));
@@ -182,7 +182,7 @@ void scene_cornell_box(World *world, Camera *camera) {
 void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   World_init(world, 11);
 
-  PCG32State rng;
+  PCG32 rng;
   pcg32_seed(&rng, 19, 29);
 
   int boxes_per_side = 20;

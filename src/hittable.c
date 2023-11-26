@@ -65,7 +65,7 @@ void HittableList_append(HittableList *self, Hittable *item) {
   self->bbox = AABB_from_AABB(self->bbox, item->bbox(item));
 }
 static bool HittableList_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                             PCG32State *rng) {
+                             PCG32 *rng) {
   HittableList *self = (HittableList *)self_;
   bool hit_anything = false;
 
@@ -90,8 +90,7 @@ void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material *mat) {
                      AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius))};
 }
 Hittable *Sphere_new(Vec3 center, float radius, Material *mat) define_init_new(Sphere, center, radius, mat);
-static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                       PCG32State *rng) {
+static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
   Sphere *self = (Sphere *)self_;
 
   Vec3 oc = vec3_sub(ray->origin, self->center);
@@ -140,7 +139,7 @@ void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material *mat) {
   self->w = vec3_div(n, vec3_length2(n));
 }
 Hittable *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material *mat) define_init_new(Quad, Q, u, v, mat);
-static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32State *rng) {
+static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
   Quad *self = (Quad *)self_;
 
   float denom = vec3_dot(self->normal, ray->direction);
@@ -192,12 +191,12 @@ Hittable *Box_new(Vec3 a, Vec3 b, Material *mat) {
 
 static HittableHitFn BVHNode_hit;
 static AABB BVHNode_bbox(const Hittable *self_) { return ((BVHNode *)self_)->bbox; }
-static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32State *rng);
-void BVHNode_init(BVHNode *self, const HittableList *list, PCG32State *rng) {
+static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32 *rng);
+void BVHNode_init(BVHNode *self, const HittableList *list, PCG32 *rng) {
   _BVHNode_init(self, list->items, list->size, rng);
 }
-Hittable *BVHNode_new(const HittableList *list, PCG32State *rng) define_init_new(BVHNode, list, rng);
-static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32State *rng) {
+Hittable *BVHNode_new(const HittableList *list, PCG32 *rng) define_init_new(BVHNode, list, rng);
+static void _BVHNode_init(BVHNode *self, Hittable **list_, size_t n, PCG32 *rng) {
   self->hittable = (Hittable){BVHNode_hit, BVHNode_bbox};
 
   // make a copy
@@ -255,8 +254,7 @@ static bool AABB_hit(const AABB *aabb, const Ray *ray, float t_min, float t_max)
   }
   return true;
 }
-static bool BVHNode_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                        PCG32State *rng) {
+static bool BVHNode_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
   BVHNode *self = (BVHNode *)self_;
   if (!AABB_hit(&self->bbox, ray, t_min, t_max))
     return false;
@@ -281,8 +279,7 @@ void Translate_init(Translate *self, Hittable *object, Vec3 offset) {
   *self = (Translate){{Translate_hit, Translate_bbox}, object, offset, bbox};
 }
 Hittable *Translate_new(Hittable *object, Vec3 offset) define_init_new(Translate, object, offset);
-static bool Translate_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                          PCG32State *rng) {
+static bool Translate_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
   Translate *self = (Translate *)self_;
   Ray offset_r = {vec3_sub(ray->origin, self->offset), ray->direction};
 
@@ -324,8 +321,7 @@ void RotateY_init(RotateY *self, Hittable *object, float angle) {
   *self = (RotateY){{RotateY_hit, RotateY_bbox}, object, sin_theta, cos_theta, AABB_from_Vec3(min_p, max_p)};
 }
 Hittable *RotateY_new(Hittable *object, float angle) define_init_new(RotateY, object, angle);
-static bool RotateY_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                        PCG32State *rng) {
+static bool RotateY_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
   RotateY *self = (RotateY *)self_;
   Ray rotated_r = {
       Vec3_rotate_y(ray->origin, self->cos_theta, self->sin_theta),
@@ -356,7 +352,7 @@ void ConstantMedium_init(ConstantMedium *self, Hittable *boundary, float density
 Hittable *ConstantMedium_new(Hittable *boundary, float density, Texture *albedo)
     define_init_new(ConstantMedium, boundary, density, albedo);
 static bool ConstantMedium_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                               PCG32State *rng) {
+                               PCG32 *rng) {
   ConstantMedium *self = (ConstantMedium *)self_;
   HitRecord rec1, rec2;
 

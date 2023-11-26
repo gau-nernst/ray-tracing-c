@@ -22,8 +22,7 @@ typedef union AABB {
 } AABB;
 
 typedef struct Hittable Hittable;
-typedef bool HittableHitFn(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec,
-                           PCG32State *rng);
+typedef bool HittableHitFn(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng);
 struct Hittable {
   HittableHitFn *hit;
   AABB (*bbox)(const Hittable *self);
@@ -75,8 +74,8 @@ typedef struct BVHNode {
   AABB bbox;
 } BVHNode;
 
-void BVHNode_init(BVHNode *self, const HittableList *list, PCG32State *rng);
-Hittable *BVHNode_new(const HittableList *list, PCG32State *rng);
+void BVHNode_init(BVHNode *self, const HittableList *list, PCG32 *rng);
+Hittable *BVHNode_new(const HittableList *list, PCG32 *rng);
 
 typedef struct Translate {
   Hittable hittable;
