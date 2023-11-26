@@ -62,13 +62,11 @@ static bool Dielectric_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *
     Vec3 r_para = vec3_mul(rec->normal, -sqrtf(fabsf(1.0f - vec3_length2(r_perp))));
     *scattered = vec3_add(r_perp, r_para);
   }
-  *color = _Texture_value(mat->albedo, rec);
+  *color = vec3(1, 1, 1);
   return true;
 }
-void Dielectric_init(Dielectric *self, Texture *albedo, float eta) {
-  *self = (Dielectric){{Dielectric_scatter, Material_emit}, albedo, eta};
-}
-Material *Dielectric_new(Texture *albedo, float eta) define_init_new(Dielectric, albedo, eta);
+void Dielectric_init(Dielectric *self, float eta) { *self = (Dielectric){{Dielectric_scatter, Material_emit}, eta}; }
+Material *Dielectric_new(float eta) define_init_new(Dielectric, eta);
 
 static bool DiffuseLight_scatter(HitRecord *rec, Vec3 incident, PCG32 *rng, Vec3 *scattered, Vec3 *color) {
   return false;

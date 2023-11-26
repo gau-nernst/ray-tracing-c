@@ -47,11 +47,10 @@ Material *Metal_new(Texture *albedo, float fuzz);
 
 typedef struct Dielectric {
   Material mat;
-  Texture *albedo;
   float eta;
 } Dielectric;
-void Dielectric_init(Dielectric *self, Texture *albedo, float eta);
-Material *Dielectric_new(Texture *albedo, float eta);
+void Dielectric_init(Dielectric *self, float eta);
+Material *Dielectric_new(float eta);
 
 typedef struct DiffuseLight {
   Material mat;

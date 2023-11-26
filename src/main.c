@@ -34,7 +34,7 @@ void scene_book1_final(World *world, Camera *camera) {
   mat = Lambertian_new(Solid_new(vec3(0.5, 0.5, 0.5)));
   HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, -1), 1000, mat));
 
-  mat = Dielectric_new(Solid_new(vec3(1, 1, 1)), 1.5);
+  mat = Dielectric_new(1.5);
   HittableList_append(&world->objects, Sphere_new(vec3(0, 1, 0), 1, mat));
 
   mat = Lambertian_new(Solid_new(vec3(0.4, 0.2, 0.1)));
@@ -55,17 +55,14 @@ void scene_book1_final(World *world, Camera *camera) {
       Vec3 center = vec3((float)a + 0.9f * pcg32_f32(&rng), radius, (float)b + 0.9f * pcg32_f32(&rng));
 
       if (vec3_length(vec3_sub(center, ref_point)) > 0.9f) {
-        Vec3 color;
-
         if (choose_material < 0.8f) {
-          color = vec3_mul(vec3_rand(&rng), vec3_rand(&rng));
+          Vec3 color = vec3_mul(vec3_rand(&rng), vec3_rand(&rng));
           mat = Lambertian_new(Solid_new(color));
         } else if (choose_material < 0.95f) {
-          color = vec3_rand_between(&rng, 0.5f, 1);
+          Vec3 color = vec3_rand_between(&rng, 0.5f, 1);
           mat = Metal_new(Solid_new(color), pcg32_f32(&rng) * 0.5f);
         } else {
-          color = vec3(1, 1, 1);
-          mat = Dielectric_new(Solid_new(color), 1.5f);
+          mat = Dielectric_new(1.5f);
         }
 
         HittableList_append(&world->objects, Sphere_new(center, radius, mat));
@@ -213,7 +210,7 @@ void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   Material *sphere_mat = Lambertian_new(Solid_new(vec3(0.7, 0.3, 0.1)));
   HittableList_append(&world->objects, Sphere_new(center1, 50, sphere_mat));
 
-  Material *glass = Dielectric_new(Solid_new(vec3(1, 1, 1)), 1.5);
+  Material *glass = Dielectric_new(1.5);
   HittableList_append(&world->objects, Sphere_new(vec3(260, 150, 45), 50, glass));
 
   Material *metal = Metal_new(Solid_new(vec3(0.8, 0.8, 0.9)), 1.0);
