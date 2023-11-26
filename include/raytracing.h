@@ -8,6 +8,7 @@
 
 typedef struct World {
   HittableList objects;
+  Hittable *light;
 } World;
 
 void World_init(World *world, size_t max_objects);

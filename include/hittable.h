@@ -24,6 +24,8 @@ typedef union AABB {
 typedef struct Hittable Hittable;
 typedef struct HittableVTable {
   bool (*hit)(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng);
+  float (*pdf)(const Hittable *self, const Ray *ray, PCG32 *rng);
+  Vec3 (*rand)(const Hittable *self, Vec3 origin, PCG32 *rng);
 } HittableVTable;
 
 struct Hittable {
@@ -61,6 +63,7 @@ typedef struct Quad {
   float D;
   Vec3 w;
   Material *material;
+  float area;
 } Quad;
 
 void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material *mat);

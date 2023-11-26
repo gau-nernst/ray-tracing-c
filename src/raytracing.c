@@ -47,21 +47,11 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     if (!rec.material->vtable->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, &pdf, rng))
       return emission_color;
 
-    // randomly sample a point on the light source
-    Vec3 on_light = vec3(pcg32_f32_between(rng, 213, 343), 554, pcg32_f32_between(rng, 227, 332));
-    Vec3 to_light = vec3_sub(on_light, rec.p);
-
-    if (vec3_dot(to_light, rec.normal) < 0)
-      return emission_color;
-
-    float light_cosine = fabsf(vec3_normalize(to_light).y); // wrt up direction
-    if (light_cosine < 0.000001f)
-      return emission_color;
-
-    float d2 = vec3_length2(to_light);
-    float light_area = (343.0f - 213.0f) * (332.0f - 227.0f);
-    pdf = d2 / (light_cosine * light_area);
-    new_ray.direction = to_light;
+    if (world->light != NULL) {
+      // change scatter ray towards the light
+      new_ray.direction = world->light->vtable->rand(world->light, rec.p, rng);
+      pdf = world->light->vtable->pdf(world->light, &new_ray, rng);
+    }
 
     // spawn new ray
     Vec3 new_color = Camera_ray_color(camera, &new_ray, world, depth - 1, rng);

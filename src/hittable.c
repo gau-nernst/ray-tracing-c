@@ -72,7 +72,7 @@ static int Hittable_compare_bbox_z(const void *a, const void *b) {
 
 static bool HittableList_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec,
                              PCG32 *rng) {
-  HittableList *self = (HittableList *)self_;
+  const HittableList *self = (const HittableList *)self_;
   bool hit_anything = false;
 
   for (int i = 0; i < self->size; i++) {
@@ -98,7 +98,7 @@ void HittableList_append(HittableList *self, Hittable *item) {
 }
 
 static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
-  Sphere *self = (Sphere *)self_;
+  const Sphere *self = (const Sphere *)self_;
 
   Vec3 oc = vec3_sub(ray->origin, self->center);
   float a = vec3_length2(ray->direction);
@@ -137,7 +137,7 @@ void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material *mat) {
 Hittable *Sphere_new(Vec3 center, float radius, Material *mat) define_init_new(Sphere, center, radius, mat);
 
 static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng) {
-  Quad *self = (Quad *)self_;
+  const Quad *self = (const Quad *)self_;
 
   float denom = vec3_dot(self->normal, ray->direction);
   if (fabsf(denom) < 1e-8f)
@@ -165,7 +165,21 @@ static bool Quad_hit(const Hittable *self_, const Ray *ray, float t_min, float t
 
   return true;
 }
-static HittableVTable QUAD_VTABLE = {Quad_hit};
+static float Quad_pdf(const Hittable *self_, const Ray *ray, PCG32 *rng) {
+  HitRecord rec;
+  if (!self_->vtable->hit(self_, ray, 0.001f, INFINITY, &rec, rng))
+    return 0.0f;
+
+  const Quad *self = (const Quad *)self_;
+  float d2 = rec.t * rec.t * vec3_length2(ray->direction);
+  float cos_theta = fabsf(vec3_dot(rec.normal, vec3_normalize(ray->direction)));
+  return d2 / (cos_theta * self->area);
+}
+static Vec3 Quad_rand(const Hittable *self_, Vec3 origin, PCG32 *rng) {
+  const Quad *self = (const Quad *)self_;
+  return vec3_add(self->Q, vec3_mul(self->u, pcg32_f32(rng)), vec3_mul(self->v, pcg32_f32(rng)), vec3_neg(origin));
+}
+static HittableVTable QUAD_VTABLE = {Quad_hit, Quad_pdf, Quad_rand};
 void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material *mat) {
   self->hittable.vtable = &QUAD_VTABLE;
   self->hittable.bbox = AABB_pad(AABB_from_Vec3(Q, vec3_add(Q, u, v)));
@@ -178,6 +192,7 @@ void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material *mat) {
   self->normal = vec3_normalize(n);
   self->D = vec3_dot(self->normal, Q);
   self->w = vec3_div(n, vec3_length2(n));
+  self->area = vec3_length(n);
 }
 Hittable *Quad_new(Vec3 Q, Vec3 u, Vec3 v, Material *mat) define_init_new(Quad, Q, u, v, mat);
 

@@ -154,10 +154,13 @@ void scene_cornell_box(World *world, Camera *camera) {
 
   HittableList_append(&world->objects, Quad_new(vec3(555, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), green));
   HittableList_append(&world->objects, Quad_new(vec3(0, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), red));
-  HittableList_append(&world->objects, Quad_new(vec3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), light));
   HittableList_append(&world->objects, Quad_new(vec3(0, 0, 0), vec3(555, 0, 0), vec3(0, 0, 555), white));
   HittableList_append(&world->objects, Quad_new(vec3(555, 555, 555), vec3(-555, 0, 0), vec3(0, 0, -555), white));
   HittableList_append(&world->objects, Quad_new(vec3(0, 0, 555), vec3(555, 0, 0), vec3(0, 555, 0), white));
+
+  Hittable *light_src = Quad_new(vec3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), light);
+  HittableList_append(&world->objects, light_src);
+  world->light = light_src;
 
   Hittable *box1 = Box_new(vec3(0, 0, 0), vec3(165, 330, 165), white);
   box1 = RotateY_new(box1, 15);
@@ -263,9 +266,9 @@ int main(int argc, char *argv[]) {
   World world = {0};
   Camera camera;
   camera.aspect_ratio = 16.0f / 9.0f;
-  camera.img_width = 400;
+  camera.img_width = 500;
   camera.samples_per_pixel = 100;
-  camera.max_depth = 10;
+  camera.max_depth = 50;
   camera.vup = vec3(0, 1, 0);
   camera.dof_angle = 0.0f;
   camera.focal_length = 10.0f;
