@@ -51,11 +51,12 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
       return emission_color;
 
     // mixture pdf
-    if (camera->importance_sampling) {
+    float prob = camera->lights_sampling_prob;
+    if (prob > 0.0f) {
       const Hittable *lights = &world->lights.hittable;
-      if (pcg32_f32(rng) < 0.5f) // change scatter ray towards the light half of the time
+      if (pcg32_f32(rng) < prob) // change scatter ray towards the light
         new_ray.direction = lights->vtable->rand(lights, rec.p, rng);
-      pdf = 0.5f * pdf + 0.5f * lights->vtable->pdf(lights, &new_ray, rng); // update pdf
+      pdf = (1.0f - prob) * pdf + prob * lights->vtable->pdf(lights, &new_ray, rng); // update pdf
     }
 
     // spawn new ray

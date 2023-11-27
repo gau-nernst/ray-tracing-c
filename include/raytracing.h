@@ -34,7 +34,7 @@ typedef struct Camera {
   Vec3 w;
   Vec3 dof_disc_u;
   Vec3 dof_disc_v;
-  bool importance_sampling;
+  float lights_sampling_prob;
 } Camera;
 
 void Camera_init(Camera *camera);

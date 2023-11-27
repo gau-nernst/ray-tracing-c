@@ -279,7 +279,7 @@ int main(int argc, char *argv[]) {
   camera.vup = vec3(0, 1, 0);
   camera.dof_angle = 0.0f;
   camera.focal_length = 10.0f;
-  camera.importance_sampling = true;
+  camera.lights_sampling_prob = 0.5f;
 
   if (argc > 3)
     camera.img_width = strtol(argv[2], NULL, 10);

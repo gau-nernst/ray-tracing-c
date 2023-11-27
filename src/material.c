@@ -36,18 +36,18 @@ static Vec3 rand_cosine_theta(PCG32 *rng) {
   float phi = 2.0f * (float)M_PI * r1;
   return vec3(cosf(phi) * sqrtf(r2), sinf(phi) * sqrtf(r2), sqrtf(1.0f - r2));
 }
+static float Lambertian_scattering_pdf(const HitRecord *rec, Vec3 r_in, Vec3 r_out) {
+  float cos_theta = vec3_dot(rec->normal, vec3_normalize(r_out));
+  return cos_theta < 0.0f ? 0.0f : cos_theta / (float)M_PI;
+}
 static bool Lambertian_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, float *pdf, PCG32 *rng) {
   ONB onb;
   ONB_from_w(&onb, rec->normal);
 
   *r_out = ONB_local(&onb, rand_cosine_theta(rng));
   *color = _Texture_value(rec);
-  *pdf = vec3_dot(onb.w, vec3_normalize(*r_out)) / (float)M_PI; // cos(theta) / pi
+  *pdf = Lambertian_scattering_pdf(rec, r_in, *r_out);
   return true;
-}
-static float Lambertian_scattering_pdf(const HitRecord *rec, Vec3 r_in, Vec3 r_out) {
-  float cos_theta = vec3_dot(rec->normal, vec3_normalize(r_out));
-  return cos_theta < 0.0f ? 0.0f : cos_theta / (float)M_PI;
 }
 static MaterialVTable LAMBERTIAN_VTABLE = {Lambertian_scatter, Lambertian_scattering_pdf, Empty_emit};
 void Lambertian_init(Material *self, Texture *albedo) {
