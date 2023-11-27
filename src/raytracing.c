@@ -50,20 +50,19 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     if (!rec.material->vtable->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, &sampling_pdf, rng))
       return emission_color;
 
-    // either because not implemented or we don't want to do importance sampling for this material
-    if (sampling_pdf == 0.0f) {
+    float prob = camera->lights_sampling_prob;
+
+    // sampling_pdf == 0 either because not implemented or we don't want to do importance sampling for this material
+    if (sampling_pdf == 0.0f || prob == 0.0f || world->lights.size == 0) {
       Vec3 scatter_color = vec3_mul(attenuation, Camera_ray_color(camera, &new_ray, world, depth - 1, rng));
       return vec3_add(emission_color, scatter_color);
     }
 
     // mixture pdf
-    float prob = camera->lights_sampling_prob;
-    if (prob > 0.0f && world->lights.size > 0) {
-      const Hittable *lights = &world->lights.hittable;
-      if (pcg32_f32(rng) < prob) // change scatter ray towards light source
-        new_ray.direction = lights->vtable->rand(lights, rec.p, rng);
-      sampling_pdf = (1.0f - prob) * sampling_pdf + prob * lights->vtable->pdf(lights, &new_ray, rng); // update pdf
-    }
+    const Hittable *lights = &world->lights.hittable;
+    if (pcg32_f32(rng) < prob) // change scatter ray towards light source
+      new_ray.direction = lights->vtable->rand(lights, rec.p, rng);
+    sampling_pdf = (1.0f - prob) * sampling_pdf + prob * lights->vtable->pdf(lights, &new_ray, rng); // update pdf
 
     float scatter_pdf = rec.material->vtable->scatter_pdf(&rec, ray->direction, new_ray.direction);
     Vec3 scatter_color =
