@@ -135,8 +135,15 @@ void scene_simple_light(World *world, Camera *camera) {
   Material *light = DiffuseLight_new(Solid_new(vec3(4, 4, 4)));
   HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, 0), 1000, perlin));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 2, 0), 2, perlin));
-  HittableList_append(&world->objects, Sphere_new(vec3(0, 7, 0), 2, light));
-  HittableList_append(&world->objects, Quad_new(vec3(3, 1, -2), vec3(2, 0, 0), vec3(0, 2, 0), light));
+
+  Hittable *light_src;
+  light_src = Quad_new(vec3(3, 1, -2), vec3(2, 0, 0), vec3(0, 2, 0), light);
+  HittableList_append(&world->objects, light_src);
+  HittableList_append(&world->lights, light_src);
+
+  light_src = Sphere_new(vec3(0, 7, 0), 2, light);
+  HittableList_append(&world->objects, light_src);
+  HittableList_append(&world->lights, light_src);
 
   camera->vfov = 20.0f;
   camera->background = VEC3_ZERO;
@@ -160,7 +167,7 @@ void scene_cornell_box(World *world, Camera *camera) {
 
   Hittable *light_src = Quad_new(vec3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), light);
   HittableList_append(&world->objects, light_src);
-  world->light = light_src;
+  HittableList_append(&world->lights, light_src);
 
   Hittable *box1 = Box_new(vec3(0, 0, 0), vec3(165, 330, 165), white);
   box1 = RotateY_new(box1, 15);
@@ -272,6 +279,7 @@ int main(int argc, char *argv[]) {
   camera.vup = vec3(0, 1, 0);
   camera.dof_angle = 0.0f;
   camera.focal_length = 10.0f;
+  camera.importance_sampling = true;
 
   if (argc > 3)
     camera.img_width = strtol(argv[2], NULL, 10);

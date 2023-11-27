@@ -85,7 +85,26 @@ static bool HittableList_hit(const Hittable *self_, const Ray *ray, float t_min,
 
   return hit_anything;
 }
-static HittableVTable HITTABLE_LIST_VTABLE = {HittableList_hit};
+static float HittableList_pdf(const Hittable *self_, const Ray *ray, PCG32 *rng) {
+  const HittableList *self = (const HittableList *)self_;
+  float pdf = 0.0f;
+  float count = 0.0f;
+  for (int i = 0; i < self->size; i++) {
+    if (self->items[i]->vtable->pdf != NULL) { // TODO: remove this when all hittables implement pdf
+      pdf += self->items[i]->vtable->pdf(self->items[i], ray, rng);
+      count += 1.0f;
+    }
+  }
+  return pdf / fmaxf(count, 1.0f);
+}
+static Vec3 HittableList_rand(const Hittable *self_, Vec3 origin, PCG32 *rng) {
+  const HittableList *self = (const HittableList *)self_;
+  Hittable *obj = self->items[pcg32_u32_between(rng, 0, self->size)];
+  if (obj->vtable->rand == NULL)
+    return HittableList_rand(self_, origin, rng); // rejection sampling
+  return obj->vtable->rand(obj, origin, rng);
+}
+static HittableVTable HITTABLE_LIST_VTABLE = {HittableList_hit, HittableList_pdf, HittableList_rand};
 void HittableList_init(HittableList *self, size_t max_size) {
   *self =
       (HittableList){{&HITTABLE_LIST_VTABLE, AABB_EMPTY}, max_size, 0, my_malloc(sizeof(self->items[0]) * max_size)};

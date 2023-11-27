@@ -3,7 +3,10 @@
 #include <math.h>
 #include <stdio.h>
 
-void World_init(World *world, size_t max_objects) { HittableList_init(&world->objects, max_objects); }
+void World_init(World *world, size_t max_objects) {
+  HittableList_init(&world->objects, max_objects);
+  HittableList_init(&world->lights, max_objects);
+}
 
 void Camera_init(Camera *camera) {
   camera->img_height = (int)((float)camera->img_width / camera->aspect_ratio);
@@ -48,10 +51,11 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
       return emission_color;
 
     // mixture pdf
-    if (world->light != NULL) {
+    if (camera->importance_sampling) {
+      const Hittable *lights = &world->lights.hittable;
       if (pcg32_f32(rng) < 0.5f) // change scatter ray towards the light half of the time
-        new_ray.direction = world->light->vtable->rand(world->light, rec.p, rng);
-      pdf = 0.5f * pdf + 0.5f * world->light->vtable->pdf(world->light, &new_ray, rng); // update pdf
+        new_ray.direction = lights->vtable->rand(lights, rec.p, rng);
+      pdf = 0.5f * pdf + 0.5f * lights->vtable->pdf(lights, &new_ray, rng); // update pdf
     }
 
     // spawn new ray
