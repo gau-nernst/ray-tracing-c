@@ -65,4 +65,15 @@ color_i =  albedo \int_{\mathbf{r}} color_{i+1}(\mathbf{r}) p_{scatter}(\mathbf{
 ```math
 color_i =  albedo \int_{\mathbf{r}} \frac{color_{i+1}(\mathbf{r}) p_{scatter}(\mathbf{r})}{p_{sampling}(\mathbf{r})} p_{sampling}(\mathbf{r}) d\mathbf{r} = albedo \cdot \mathbb{E}_{p_{sampling}} \left[ \frac{color_{i+1}(\mathbf{r}) p_{scatter}(\mathbf{r})}{p_{sampling}(\mathbf{r})} \right]
 ```
-- Thus, we can estimate the same integral by sampling from another pdf of choice, and account for that by dividing by the pdf value. Note that $p_{sampling}$ shouldn't be zero when $p_{scatter}$ is non-zero (support of $p_{sampling}$ must contain support of $p_{scatter}$). But what $p_{sampling}(\mathbf{r})$ pdf should we use, and why? The idea is that noise/error in the final render is the standard deviation of our estimator.
+- Thus, we can estimate the same integral by sampling from another pdf of choice, and account for that by dividing by the pdf value. Note that $p_{sampling}$ shouldn't be zero when $p_{scatter}$ is non-zero (support of $p_{sampling}$ must contain support of $p_{scatter}$). But what $p_{sampling}(\mathbf{r})$ pdf should we use, and why? The idea is that noise/error in the final render is the standard deviation of our estimator. Since $\mathrm{Var}[X] = \mathbb{E}[X^2] - \mathbb{E}[X]^2$, and observing that the second term is the same either estimator, we only need to compare the first term.
+```math
+reduction \; in \; variance = \mathbb{E}_{p_{scatter}}[color_{i+1}(\mathbf{r})^2] - \mathbb{E}_{p_{sampling}}\left[\left( \frac{color_{i+1}(\mathbf{r}) p_{scatter}(\mathbf{r})}{p_{sampling}(\mathbf{r})} \right)^2\right]
+```
+```math
+= \mathbb{E}_{p_{scatter}}[color_{i+1}(\mathbf{r})^2] - \mathbb{E}_{p_{scatter}} \left[ \frac{color_{i+1}(\mathbf{r})^2 \cdot p_{scatter}(\mathbf{r})}{p_{sampling}(\mathbf{r})} \right]
+```
+```math
+= \mathbb{E}_{p_{scatter}} \left[ color_{i+1}(\mathbf{r})^2 \left( 1 - \frac{p_{scatter}(\mathbf{r})}{p_{sampling}(\mathbf{r})} \right) \right]
+```
+- Since $color_{i+1}(\mathbf{r})^2 \geq 0$, we want $p_{scatter}(\mathbf{r}) < p_{sampling}(\mathbf{r})$. However, since they are pdf, we can't have $p_{scatter}(\mathbf{r}) < p_{sampling}(\mathbf{r}), \forall \mathbf{r}$. Instead, we need to make a trade-off: we let $p_{scatter}(\mathbf{r}) < p_{sampling}(\mathbf{r})$ when $color_{i+1}(\mathbf{r})^2$ is large, and $p_{scatter}(\mathbf{r}) > p_{sampling}(\mathbf{r})$ when $color_{i+1}(\mathbf{r})^2$ is small, so that on average, we obtain a reduction in variance. It implies that we should **sample towards light sources more frequently than sampling other directions**. This is the key of importance sampling.
+- Note that we can't always sample towards light sources, since $p_{sampling}$ might be zero when $p_{scatter}$ is not zero. A simple trick is to use a mixture of distributions: sample p% towards light sources, and (1-p)% with scatter pdf; the resulting pdf is the weighted average of the density functions.
