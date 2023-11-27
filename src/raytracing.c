@@ -44,25 +44,28 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     Ray new_ray;
     new_ray.origin = rec.p;
     Vec3 attenuation;
-    float pdf;
+    float sampling_pdf = 0.0f;
     Vec3 emission_color = rec.material->vtable->emit(&rec);
 
-    if (!rec.material->vtable->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, &pdf, rng))
+    if (!rec.material->vtable->scatter(&rec, ray->direction, &new_ray.direction, &attenuation, &sampling_pdf, rng))
       return emission_color;
 
     // mixture pdf
     float prob = camera->lights_sampling_prob;
-    if (prob > 0.0f) {
+    if (prob > 0.0f && world->lights.size > 0) {
       const Hittable *lights = &world->lights.hittable;
-      if (pcg32_f32(rng) < prob) // change scatter ray towards the light
+      if (pcg32_f32(rng) < prob) // change scatter ray towards light source
         new_ray.direction = lights->vtable->rand(lights, rec.p, rng);
-      pdf = (1.0f - prob) * pdf + prob * lights->vtable->pdf(lights, &new_ray, rng); // update pdf
+      sampling_pdf = (1.0f - prob) * sampling_pdf + prob * lights->vtable->pdf(lights, &new_ray, rng); // update pdf
     }
 
     // spawn new ray
     Vec3 new_color = Camera_ray_color(camera, &new_ray, world, depth - 1, rng);
-    float scattering_pdf = rec.material->vtable->scattering_pdf(&rec, ray->direction, new_ray.direction);
-    Vec3 scatter_color = vec3_mul(attenuation, scattering_pdf, new_color, 1.0f / pdf);
+    Vec3 scatter_color = vec3_mul(attenuation, new_color);
+    if (sampling_pdf > 0.0f) { // TODO: remove this when all materials return sampling_pdf
+      float scattering_pdf = rec.material->vtable->scattering_pdf(&rec, ray->direction, new_ray.direction);
+      scatter_color = vec3_mul(scatter_color, scattering_pdf / sampling_pdf);
+    }
     return vec3_add(scatter_color, emission_color);
   }
 
