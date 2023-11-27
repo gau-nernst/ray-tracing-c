@@ -11,7 +11,7 @@ static Vec3 _Texture_value(const HitRecord *rec) {
 static bool Empty_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, float *pdf, PCG32 *rng) {
   return false;
 }
-static float Empty_scattering_pdf(const HitRecord *rec, Vec3 r_in, Vec3 r_out) { return 0.0f; }
+static float Empty_scatter_pdf(const HitRecord *rec, Vec3 r_in, Vec3 r_out) { return 0.0f; }
 static Vec3 Empty_emit(const HitRecord *rec) { return VEC3_ZERO; }
 
 #define define_material_new(Type, ...)                                                                                 \
@@ -25,7 +25,7 @@ static bool SurfaceNormal_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, 
   *color = vec3float_mul(vec3_add(rec->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
   return false;
 }
-static MaterialVTable SURFACE_NORMAL_VTABLE = {SurfaceNormal_scatter, Empty_scattering_pdf, Empty_emit};
+static MaterialVTable SURFACE_NORMAL_VTABLE = {SurfaceNormal_scatter, Empty_scatter_pdf, Empty_emit};
 void SurfaceNormal_init(Material *self) { self->vtable = &SURFACE_NORMAL_VTABLE; }
 Material *SurfaceNormal_new() define_material_new(SurfaceNormal);
 
@@ -36,7 +36,7 @@ static Vec3 rand_cosine_theta(PCG32 *rng) {
   float phi = 2.0f * (float)M_PI * r1;
   return vec3(cosf(phi) * sqrtf(r2), sinf(phi) * sqrtf(r2), sqrtf(1.0f - r2));
 }
-static float Lambertian_scattering_pdf(const HitRecord *rec, Vec3 r_in, Vec3 r_out) {
+static float Lambertian_scatter_pdf(const HitRecord *rec, Vec3 r_in, Vec3 r_out) {
   float cos_theta = vec3_dot(rec->normal, vec3_normalize(r_out));
   return cos_theta < 0.0f ? 0.0f : cos_theta / (float)M_PI;
 }
@@ -46,10 +46,10 @@ static bool Lambertian_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec
 
   *r_out = ONB_local(&onb, rand_cosine_theta(rng));
   *color = _Texture_value(rec);
-  *pdf = Lambertian_scattering_pdf(rec, r_in, *r_out);
+  *pdf = Lambertian_scatter_pdf(rec, r_in, *r_out);
   return true;
 }
-static MaterialVTable LAMBERTIAN_VTABLE = {Lambertian_scatter, Lambertian_scattering_pdf, Empty_emit};
+static MaterialVTable LAMBERTIAN_VTABLE = {Lambertian_scatter, Lambertian_scatter_pdf, Empty_emit};
 void Lambertian_init(Material *self, Texture *albedo) {
   self->vtable = &LAMBERTIAN_VTABLE;
   self->albedo = albedo;
@@ -65,7 +65,7 @@ static bool Metal_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *co
   *color = _Texture_value(rec);
   return vec3_dot(*r_out, rec->normal) > 0.0f; // check for degeneration
 }
-static MaterialVTable METAL_VTABLE = {Metal_scatter, Empty_scattering_pdf, Empty_emit};
+static MaterialVTable METAL_VTABLE = {Metal_scatter, Empty_scatter_pdf, Empty_emit};
 void Metal_init(Material *self, Texture *albedo, float fuzz) {
   self->vtable = &METAL_VTABLE;
   self->albedo = albedo;
@@ -97,7 +97,7 @@ static bool Dielectric_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec
   *color = vec3(1, 1, 1);
   return true;
 }
-static MaterialVTable DIELECTRIC_VTABLE = {Dielectric_scatter, Empty_scattering_pdf, Empty_emit};
+static MaterialVTable DIELECTRIC_VTABLE = {Dielectric_scatter, Empty_scatter_pdf, Empty_emit};
 void Dielectric_init(Material *self, float eta) {
   self->vtable = &DIELECTRIC_VTABLE;
   self->eta = eta;
@@ -105,7 +105,7 @@ void Dielectric_init(Material *self, float eta) {
 Material *Dielectric_new(float eta) define_material_new(Dielectric, eta);
 
 static Vec3 DiffuseLight_emit(const HitRecord *rec) { return rec->front_face ? _Texture_value(rec) : VEC3_ZERO; }
-static MaterialVTable DIFFUSE_LIGHT_VTABLE = {Empty_scatter, Empty_scattering_pdf, DiffuseLight_emit};
+static MaterialVTable DIFFUSE_LIGHT_VTABLE = {Empty_scatter, Empty_scatter_pdf, DiffuseLight_emit};
 void DiffuseLight_init(Material *self, Texture *albedo) {
   self->vtable = &DIFFUSE_LIGHT_VTABLE;
   self->albedo = albedo;
@@ -117,7 +117,7 @@ static bool Isotropic_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3
   *color = _Texture_value(rec);
   return true;
 }
-static MaterialVTable ISOTROPIC_VTABLE = {Isotropic_scatter, Empty_scattering_pdf, Empty_emit};
+static MaterialVTable ISOTROPIC_VTABLE = {Isotropic_scatter, Empty_scatter_pdf, Empty_emit};
 void Isotropic_init(Material *self, Texture *albedo) {
   self->vtable = &ISOTROPIC_VTABLE;
   self->albedo = albedo;

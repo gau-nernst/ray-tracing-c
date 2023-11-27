@@ -12,7 +12,7 @@ typedef struct Ray Ray;
 
 typedef struct MaterialVTable {
   bool (*scatter)(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, float *pdf, PCG32 *rng);
-  float (*scattering_pdf)(const HitRecord *rec, Vec3 r_in, Vec3 r_out);
+  float (*scatter_pdf)(const HitRecord *rec, Vec3 r_in, Vec3 r_out);
   Vec3 (*emit)(const HitRecord *rec);
 } MaterialVTable;
 

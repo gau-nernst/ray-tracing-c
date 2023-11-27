@@ -63,8 +63,8 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     Vec3 new_color = Camera_ray_color(camera, &new_ray, world, depth - 1, rng);
     Vec3 scatter_color = vec3_mul(attenuation, new_color);
     if (sampling_pdf > 0.0f) { // TODO: remove this when all materials return sampling_pdf
-      float scattering_pdf = rec.material->vtable->scattering_pdf(&rec, ray->direction, new_ray.direction);
-      scatter_color = vec3_mul(scatter_color, scattering_pdf / sampling_pdf);
+      float scatter_pdf = rec.material->vtable->scatter_pdf(&rec, ray->direction, new_ray.direction);
+      scatter_color = vec3_mul(scatter_color, scatter_pdf / sampling_pdf);
     }
     return vec3_add(scatter_color, emission_color);
   }
