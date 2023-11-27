@@ -65,4 +65,4 @@ color_i =  albedo \int_{\mathbf{r}} color_{i+1}(\mathbf{r}) p_{scatter}(\mathbf{
 ```math
 color_i =  albedo \int_{\mathbf{r}} \frac{color_{i+1}(\mathbf{r}) p_{scatter}(\mathbf{r})}{p_{sampling}(\mathbf{r})} p_{sampling}(\mathbf{r}) d\mathbf{r} = albedo \cdot \mathbb{E}_{p_{sampling}} \left[ \frac{color_{i+1}(\mathbf{r}) p_{scatter}(\mathbf{r})}{p_{sampling}(\mathbf{r})} \right]
 ```
-- Thus, we can estimate the same integral by sampling from another pdf of choice, and account for that by dividing by the pdf value. But what $p_{sampling}(\mathbf{r})$ pdf should we use, and why? The idea is that noise/error in the final render is the standard deviation of our estimator.
+- Thus, we can estimate the same integral by sampling from another pdf of choice, and account for that by dividing by the pdf value. Note that $p_{sampling}$ shouldn't be zero when $p_{scatter}$ is non-zero (support of $p_{sampling}$ must contain support of $p_{scatter}$). But what $p_{sampling}(\mathbf{r})$ pdf should we use, and why? The idea is that noise/error in the final render is the standard deviation of our estimator.
