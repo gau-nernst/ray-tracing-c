@@ -1,4 +1,5 @@
 #include "raytracing.h"
+#include "material.h"
 #include "pcg32.h"
 #include <math.h>
 #include <stdio.h>
@@ -42,17 +43,17 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
   const Hittable *objects = &world->objects.hittable;
   if (objects->vtable->hit(objects, ray, 1e-3f, INFINITY, &rec, rng)) {
     Ray r_out = {rec.p};
-    Vec3 attenuation;
-    Vec3 emission_color = rec.material->vtable->emit(&rec);
+    Vec3 albedo;
+    bool skip_pdf;
+    Vec3 emission_color = Material_emit(&rec);
 
-    if (!rec.material->vtable->scatter(&rec, ray->direction, &r_out.direction, &attenuation, rng))
+    if (!Material_scatter(&rec, ray->direction, &r_out.direction, &albedo, &skip_pdf, rng))
       return emission_color;
 
-    float (*scatter_pdf_fn)(Vec3, Vec3, Vec3) = rec.material->vtable->scatter_pdf;
     float prob = camera->lights_sampling_prob;
 
-    if (scatter_pdf_fn == NULL || prob == 0.0f || world->lights.size == 0) {
-      Vec3 scatter_color = vec3_mul(attenuation, Camera_ray_color(camera, &r_out, world, depth - 1, rng));
+    if (skip_pdf || prob == 0.0f || world->lights.size == 0) {
+      Vec3 scatter_color = vec3_mul(albedo, Camera_ray_color(camera, &r_out, world, depth - 1, rng));
       return vec3_add(emission_color, scatter_color);
     }
 
@@ -61,11 +62,11 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
     if (pcg32_f32(rng) < prob)
       r_out.direction = lights->vtable->rand(lights, rec.p, rng);
 
-    float scatter_pdf = scatter_pdf_fn(rec.normal, ray->direction, r_out.direction);
+    float scatter_pdf = Material_scatter_pdf(rec.material, rec.normal, ray->direction, r_out.direction);
     float sampling_pdf = (1.0f - prob) * scatter_pdf + prob * lights->vtable->pdf(lights, &r_out, rng);
 
     Vec3 scatter_color =
-        vec3_mul(attenuation, Camera_ray_color(camera, &r_out, world, depth - 1, rng), scatter_pdf / sampling_pdf);
+        vec3_mul(albedo, Camera_ray_color(camera, &r_out, world, depth - 1, rng), scatter_pdf / sampling_pdf);
     return vec3_add(emission_color, scatter_color);
   }
 
