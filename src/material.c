@@ -1,8 +1,7 @@
 #include "material.h"
+#include "texture.h"
 #include "utils.h"
-#include "vec3.h"
 #include <math.h>
-#include <stdlib.h>
 
 static Vec3 _Texture_value(const HitRecord *rec) {
   const Texture *texture = rec->material->albedo;

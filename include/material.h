@@ -1,11 +1,10 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
-#include "texture.h"
-#include "utils.h"
 #include "vec3.h"
 #include <stdbool.h>
 
+typedef struct Texture Texture;
 typedef struct Material Material;
 
 typedef struct HitRecord {

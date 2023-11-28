@@ -1,6 +1,7 @@
 #include "raytracing.h"
 #include "material.h"
 #include "pcg32.h"
+#include "utils.h"
 #include <math.h>
 #include <stdio.h>
 

@@ -1,9 +1,13 @@
 #ifndef HITTABLE_H
 #define HITTABLE_H
 
-#include "material.h"
 #include "vec3.h"
 #include <stdbool.h>
+#include <stddef.h>
+
+typedef struct Texture Texture;
+typedef struct Material Material;
+typedef struct HitRecord HitRecord;
 
 typedef struct Ray {
   Vec3 origin;
