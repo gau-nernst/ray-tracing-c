@@ -11,8 +11,8 @@ typedef struct HitRecord HitRecord;
 typedef struct Ray Ray;
 
 typedef struct MaterialVTable {
-  bool (*scatter)(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, float *pdf, PCG32 *rng);
-  float (*scatter_pdf)(const HitRecord *rec, Vec3 r_in, Vec3 r_out);
+  bool (*scatter)(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, PCG32 *rng);
+  float (*scatter_pdf)(Vec3 normal, Vec3 r_in, Vec3 r_out);
   Vec3 (*emit)(const HitRecord *rec);
 } MaterialVTable;
 
