@@ -8,6 +8,7 @@
 
 typedef struct World {
   HittableList objects;
+  HittableList lights;
 } World;
 
 void World_init(World *world, size_t max_objects);
@@ -33,6 +34,7 @@ typedef struct Camera {
   Vec3 w;
   Vec3 dof_disc_u;
   Vec3 dof_disc_v;
+  float lights_sampling_prob;
 } Camera;
 
 void Camera_init(Camera *camera);

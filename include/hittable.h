@@ -22,10 +22,15 @@ typedef union AABB {
 } AABB;
 
 typedef struct Hittable Hittable;
-typedef bool HittableHitFn(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng);
+typedef struct HittableVTable {
+  bool (*hit)(const Hittable *self, const Ray *ray, float t_min, float t_max, HitRecord *rec, PCG32 *rng);
+  float (*pdf)(const Hittable *self, const Ray *ray, PCG32 *rng);
+  Vec3 (*rand)(const Hittable *self, Vec3 origin, PCG32 *rng);
+} HittableVTable;
+
 struct Hittable {
-  HittableHitFn *hit;
-  AABB (*bbox)(const Hittable *self);
+  HittableVTable *vtable;
+  AABB bbox;
 };
 
 typedef struct HittableList {
@@ -33,7 +38,6 @@ typedef struct HittableList {
   size_t max_size;
   size_t size;
   Hittable **items;
-  AABB bbox;
 } HittableList;
 
 void HittableList_init(HittableList *self, size_t max_size);
@@ -45,7 +49,6 @@ typedef struct Sphere {
   Vec3 center;
   float radius;
   Material *material;
-  AABB bbox;
 } Sphere;
 
 void Sphere_init(Sphere *self, Vec3 center, float radius, Material *mat);
@@ -60,7 +63,7 @@ typedef struct Quad {
   float D;
   Vec3 w;
   Material *material;
-  AABB bbox;
+  float area;
 } Quad;
 
 void Quad_init(Quad *self, Vec3 Q, Vec3 u, Vec3 v, Material *mat);
@@ -71,7 +74,6 @@ typedef struct BVHNode {
   Hittable hittable;
   Hittable *left;
   Hittable *right;
-  AABB bbox;
 } BVHNode;
 
 void BVHNode_init(BVHNode *self, const HittableList *list, PCG32 *rng);
@@ -81,7 +83,6 @@ typedef struct Translate {
   Hittable hittable;
   Hittable *object;
   Vec3 offset;
-  AABB bbox;
 } Translate;
 
 void Translate_init(Translate *self, Hittable *object, Vec3 offset);
@@ -92,7 +93,6 @@ typedef struct RotateY {
   Hittable *object;
   float sin_theta;
   float cos_theta;
-  AABB bbox;
 } RotateY;
 
 void RotateY_init(RotateY *self, Hittable *object, float angle);

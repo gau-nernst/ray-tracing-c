@@ -1,3 +1,5 @@
+#include "hittable.h"
+#include "material.h"
 #include "raytracing.h"
 #include "tiff.h"
 #include "utils.h"
@@ -135,8 +137,15 @@ void scene_simple_light(World *world, Camera *camera) {
   Material *light = DiffuseLight_new(Solid_new(vec3(4, 4, 4)));
   HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, 0), 1000, perlin));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 2, 0), 2, perlin));
-  HittableList_append(&world->objects, Sphere_new(vec3(0, 7, 0), 2, light));
-  HittableList_append(&world->objects, Quad_new(vec3(3, 1, -2), vec3(2, 0, 0), vec3(0, 2, 0), light));
+
+  Hittable *light_src;
+  light_src = Quad_new(vec3(3, 1, -2), vec3(2, 0, 0), vec3(0, 2, 0), light);
+  HittableList_append(&world->objects, light_src);
+  HittableList_append(&world->lights, light_src);
+
+  light_src = Sphere_new(vec3(0, 7, 0), 2, light);
+  HittableList_append(&world->objects, light_src);
+  HittableList_append(&world->lights, light_src);
 
   camera->vfov = 20.0f;
   camera->background = VEC3_ZERO;
@@ -154,10 +163,13 @@ void scene_cornell_box(World *world, Camera *camera) {
 
   HittableList_append(&world->objects, Quad_new(vec3(555, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), green));
   HittableList_append(&world->objects, Quad_new(vec3(0, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), red));
-  HittableList_append(&world->objects, Quad_new(vec3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), light));
   HittableList_append(&world->objects, Quad_new(vec3(0, 0, 0), vec3(555, 0, 0), vec3(0, 0, 555), white));
   HittableList_append(&world->objects, Quad_new(vec3(555, 555, 555), vec3(-555, 0, 0), vec3(0, 0, -555), white));
   HittableList_append(&world->objects, Quad_new(vec3(0, 0, 555), vec3(555, 0, 0), vec3(0, 555, 0), white));
+
+  Hittable *light_src = Quad_new(vec3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), light);
+  HittableList_append(&world->objects, light_src);
+  HittableList_append(&world->lights, light_src);
 
   Hittable *box1 = Box_new(vec3(0, 0, 0), vec3(165, 330, 165), white);
   box1 = RotateY_new(box1, 15);
@@ -203,7 +215,9 @@ void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   HittableList_append(&world->objects, boxes1);
 
   Material *light = DiffuseLight_new(Solid_new(vec3(7, 7, 7)));
-  HittableList_append(&world->objects, Quad_new(vec3(123, 554, 147), vec3(300, 0, 0), vec3(0, 0, 265), light));
+  Hittable *light_src = Quad_new(vec3(123, 554, 147), vec3(300, 0, 0), vec3(0, 0, 265), light);
+  HittableList_append(&world->objects, light_src);
+  HittableList_append(&world->lights, light_src);
 
   Vec3 center1 = vec3(400, 400, 200);
   // Vec3 center2 = {430, 400, 200}; // TODO: moving sphere
@@ -263,12 +277,13 @@ int main(int argc, char *argv[]) {
   World world = {0};
   Camera camera;
   camera.aspect_ratio = 16.0f / 9.0f;
-  camera.img_width = 400;
+  camera.img_width = 500;
   camera.samples_per_pixel = 100;
-  camera.max_depth = 10;
+  camera.max_depth = 50;
   camera.vup = vec3(0, 1, 0);
   camera.dof_angle = 0.0f;
   camera.focal_length = 10.0f;
+  camera.lights_sampling_prob = 0.5f;
 
   if (argc > 3)
     camera.img_width = strtol(argv[2], NULL, 10);

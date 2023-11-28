@@ -5,12 +5,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 
-static Vec3 Solid_value(Texture *self_, float u, float v, Vec3 p) { return ((Solid *)self_)->color; }
+static Vec3 Solid_value(const Texture *self_, float u, float v, Vec3 p) { return ((Solid *)self_)->color; }
 void Solid_init(Solid *self, Vec3 color) { *self = (Solid){{Solid_value}, color}; }
 Texture *Solid_new(Vec3 color) define_init_new(Solid, color);
 
-static Vec3 Checker_value(Texture *self_, float u, float v, Vec3 p) {
-  Checker *self = (Checker *)self_;
+static Vec3 Checker_value(const Texture *self_, float u, float v, Vec3 p) {
+  const Checker *self = (const Checker *)self_;
   // int x = (int)floorf(p.x / texture->scale);
   // int y = (int)floorf(p.y / texture->scale);
   // int z = (int)floorf(p.z / texture->scale);
@@ -25,8 +25,8 @@ void Checker_init(Checker *self, float scale, Texture *even, Texture *odd) {
 }
 Texture *Checker_new(float scale, Texture *even, Texture *odd) define_init_new(Checker, scale, even, odd);
 
-static Vec3 Image_value(Texture *self_, float u, float v, Vec3 p) {
-  Image *self = (Image *)self_;
+static Vec3 Image_value(const Texture *self_, float u, float v, Vec3 p) {
+  const Image *self = (const Image *)self_;
   // nearest neighbour sampling
   // flip v to image coordinates
   int i = (int)roundf(u * (float)(self->width - 1));
@@ -43,9 +43,9 @@ void Image_init(Image *image, char *filename) {
 Texture *Image_new(char *filename) define_init_new(Image, filename);
 
 static void Perlin_permute(int perm[N_PERLIN], PCG32 *rng);
-static float Perlin_turbulence(Perlin *perlin, Vec3 p);
-static Vec3 Perlin_value(Texture *self_, float u, float v, Vec3 p) {
-  Perlin *self = (Perlin *)self_;
+static float Perlin_turbulence(const Perlin *perlin, Vec3 p);
+static Vec3 Perlin_value(const Texture *self_, float u, float v, Vec3 p) {
+  const Perlin *self = (const Perlin *)self_;
   p = vec3_mul(p, self->scale);
   float value = 0.5f * (1.0f + sinf(p.z + 10.0f * Perlin_turbulence(self, p)));
   return vec3(value, value, value);
@@ -75,7 +75,7 @@ static void Perlin_permute(int perm[N_PERLIN], PCG32 *rng) {
 
 static float hermitian_smoothing(float t) { return t * t * (3.0f - 2.0f * t); }
 
-static float Perlin_noise(Perlin *perlin, Vec3 p) {
+static float Perlin_noise(const Perlin *perlin, Vec3 p) {
   int i = (int)floorf(p.x);
   int j = (int)floorf(p.y);
   int k = (int)floorf(p.z);
@@ -102,7 +102,7 @@ static float Perlin_noise(Perlin *perlin, Vec3 p) {
   return value;
 }
 
-static float Perlin_turbulence(Perlin *perlin, Vec3 p) {
+static float Perlin_turbulence(const Perlin *perlin, Vec3 p) {
   float value = 0.0f;
   float weight = 1.0f;
   for (int i = 0; i < perlin->depth; i++) {

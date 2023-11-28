@@ -1,8 +1,12 @@
 #include "raytracing.h"
+#include "pcg32.h"
 #include <math.h>
 #include <stdio.h>
 
-void World_init(World *world, size_t max_objects) { HittableList_init(&world->objects, max_objects); }
+void World_init(World *world, size_t max_objects) {
+  HittableList_init(&world->objects, max_objects);
+  HittableList_init(&world->lights, max_objects);
+}
 
 void Camera_init(Camera *camera) {
   camera->img_height = (int)((float)camera->img_width / camera->aspect_ratio);
@@ -36,17 +40,33 @@ static Vec3 Camera_ray_color(const Camera *camera, const Ray *ray, const World *
 
   HitRecord rec;
   const Hittable *objects = &world->objects.hittable;
-  if (objects->hit(objects, ray, 1e-3f, INFINITY, &rec, rng)) {
-    Ray new_ray;
-    new_ray.origin = rec.p;
-    Vec3 scatter_color;
-    Vec3 emission_color = rec.material->emit(&rec);
+  if (objects->vtable->hit(objects, ray, 1e-3f, INFINITY, &rec, rng)) {
+    Ray r_out = {rec.p};
+    Vec3 attenuation;
+    Vec3 emission_color = rec.material->vtable->emit(&rec);
 
-    if (!rec.material->scatter(&rec, ray->direction, rng, &new_ray.direction, &scatter_color))
+    if (!rec.material->vtable->scatter(&rec, ray->direction, &r_out.direction, &attenuation, rng))
       return emission_color;
 
-    scatter_color = vec3_mul(scatter_color, Camera_ray_color(camera, &new_ray, world, depth - 1, rng)); // spawn new ray
-    return vec3_add(scatter_color, emission_color);
+    float (*scatter_pdf_fn)(Vec3, Vec3, Vec3) = rec.material->vtable->scatter_pdf;
+    float prob = camera->lights_sampling_prob;
+
+    if (scatter_pdf_fn == NULL || prob == 0.0f || world->lights.size == 0) {
+      Vec3 scatter_color = vec3_mul(attenuation, Camera_ray_color(camera, &r_out, world, depth - 1, rng));
+      return vec3_add(emission_color, scatter_color);
+    }
+
+    // mixture pdf: change scatter ray towards light source
+    const Hittable *lights = &world->lights.hittable;
+    if (pcg32_f32(rng) < prob)
+      r_out.direction = lights->vtable->rand(lights, rec.p, rng);
+
+    float scatter_pdf = scatter_pdf_fn(rec.normal, ray->direction, r_out.direction);
+    float sampling_pdf = (1.0f - prob) * scatter_pdf + prob * lights->vtable->pdf(lights, &r_out, rng);
+
+    Vec3 scatter_color =
+        vec3_mul(attenuation, Camera_ray_color(camera, &r_out, world, depth - 1, rng), scatter_pdf / sampling_pdf);
+    return vec3_add(emission_color, scatter_color);
   }
 
   // scene background
@@ -102,9 +122,11 @@ void Camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
         pixel_color = vec3_add(pixel_color, Camera_ray_color(camera, &ray, world, camera->max_depth, &rng));
       }
 
-      pixel_color = vec3_div(pixel_color, (float)camera->samples_per_pixel);
-      for (int c = 0; c < 3; c++)
-        buffer[(j * camera->img_width + i) * 3 + c] = (int)(256.0f * clamp(sqrtf(pixel_color.values[c]), 0.0f, 0.999f));
+      for (int c = 0; c < 3; c++) {
+        float value = pixel_color.values[c];
+        value = clamp(sqrtf(value / camera->samples_per_pixel), 0.0f, 0.999f);
+        buffer[(j * camera->img_width + i) * 3 + c] = (int)(256.0f * value);
+      }
     }
   }
   fprintf(stderr, "\nDone\n");
