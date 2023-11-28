@@ -1,4 +1,5 @@
 #include "hittable.h"
+#include "material.h"
 #include "pcg32.h"
 #include "vec3.h"
 #include <math.h>
@@ -148,7 +149,34 @@ static bool Sphere_hit(const Hittable *self_, const Ray *ray, float t_min, float
 
   return true;
 }
-static HittableVTable SPHERE_VTABLE = {Sphere_hit};
+static float Sphere_pdf(const Hittable *self_, const Ray *ray, PCG32 *rng) {
+  HitRecord rec;
+  if (!self_->vtable->hit(self_, ray, 0.001f, INFINITY, &rec, rng))
+    return 0.0f;
+
+  const Sphere *self = (const Sphere *)self_;
+  Vec3 oc = vec3_sub(self->center, ray->origin);
+  float cos_theta_max = sqrtf(1.0f - self->radius * self->radius / vec3_length2(oc));
+  float solid_angle = 2.0f * (float)M_PI * (1.0f - cos_theta_max);
+  return 1.0f / solid_angle;
+}
+static Vec3 Sphere_rand(const Hittable *self_, Vec3 origin, PCG32 *rng) {
+  const Sphere *self = (const Sphere *)self_;
+  Vec3 oc = vec3_sub(self->center, origin);
+
+  float r1 = pcg32_f32(rng);
+  float r2 = pcg32_f32(rng);
+  float z = 1.0f + r2 * (sqrtf(1.0f - self->radius * self->radius / vec3_length2(oc)) - 1);
+
+  float phi = 2.0f * (float)M_PI * r1;
+  float x = cosf(phi) * sqrtf(1.0f - z * z);
+  float y = sinf(phi) * sqrtf(1.0f - z * z);
+
+  ONB onb;
+  ONB_from_w(&onb, oc);
+  return ONB_local(&onb, vec3(x, y, z));
+}
+static HittableVTable SPHERE_VTABLE = {Sphere_hit, Sphere_pdf, Sphere_rand};
 void Sphere_init(Sphere *sphere, Vec3 center, float radius, Material *mat) {
   AABB bbox = AABB_from_Vec3(vec3_sub(center, radius), vec3_add(center, radius));
   *sphere = (Sphere){{&SPHERE_VTABLE, bbox}, center, radius, mat};
