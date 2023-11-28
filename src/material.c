@@ -33,10 +33,6 @@ static Vec3 rand_cosine_theta(PCG32 *rng) {
   float phi = 2.0f * (float)M_PI * r1;
   return vec3(cosf(phi) * sqrtf(r2), sinf(phi) * sqrtf(r2), sqrtf(1.0f - r2));
 }
-static float Lambertian_scatter_pdf(Vec3 normal, Vec3 r_in, Vec3 r_out) {
-  float cos_theta = vec3_dot(normal, vec3_normalize(r_out));
-  return cos_theta < 0.0f ? 0.0f : cos_theta / (float)M_PI;
-}
 static bool Lambertian_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, PCG32 *rng) {
   ONB onb;
   ONB_from_w(&onb, rec->normal);
@@ -44,6 +40,10 @@ static bool Lambertian_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec
   *r_out = ONB_local(&onb, rand_cosine_theta(rng));
   *color = _Texture_value(rec);
   return true;
+}
+static float Lambertian_scatter_pdf(Vec3 normal, Vec3 r_in, Vec3 r_out) {
+  float cos_theta = vec3_dot(normal, vec3_normalize(r_out));
+  return cos_theta < 0.0f ? 0.0f : cos_theta / (float)M_PI;
 }
 static MaterialVTable LAMBERTIAN_VTABLE = {Lambertian_scatter, Lambertian_scatter_pdf, Empty_emit};
 void Lambertian_init(Material *self, Texture *albedo) {
@@ -113,7 +113,8 @@ static bool Isotropic_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3
   *color = _Texture_value(rec);
   return true;
 }
-static MaterialVTable ISOTROPIC_VTABLE = {Isotropic_scatter, NULL, Empty_emit};
+static float Isotropic_scatter_pdf(Vec3 normal, Vec3 r_in, Vec3 r_out) { return 1.0f / (4.0f * (float)M_PI); }
+static MaterialVTable ISOTROPIC_VTABLE = {Isotropic_scatter, Isotropic_scatter_pdf, Empty_emit};
 void Isotropic_init(Material *self, Texture *albedo) {
   self->vtable = &ISOTROPIC_VTABLE;
   self->albedo = albedo;

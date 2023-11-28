@@ -1,3 +1,5 @@
+#include "hittable.h"
+#include "material.h"
 #include "raytracing.h"
 #include "tiff.h"
 #include "utils.h"
@@ -213,7 +215,9 @@ void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   HittableList_append(&world->objects, boxes1);
 
   Material *light = DiffuseLight_new(Solid_new(vec3(7, 7, 7)));
-  HittableList_append(&world->objects, Quad_new(vec3(123, 554, 147), vec3(300, 0, 0), vec3(0, 0, 265), light));
+  Hittable *light_src = Quad_new(vec3(123, 554, 147), vec3(300, 0, 0), vec3(0, 0, 265), light);
+  HittableList_append(&world->objects, light_src);
+  HittableList_append(&world->lights, light_src);
 
   Vec3 center1 = vec3(400, 400, 200);
   // Vec3 center2 = {430, 400, 200}; // TODO: moving sphere
