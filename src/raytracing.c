@@ -122,9 +122,11 @@ void Camera_render(const Camera *camera, const World *world, uint8_t *buffer) {
         pixel_color = vec3_add(pixel_color, Camera_ray_color(camera, &ray, world, camera->max_depth, &rng));
       }
 
-      pixel_color = vec3_div(pixel_color, (float)camera->samples_per_pixel);
-      for (int c = 0; c < 3; c++)
-        buffer[(j * camera->img_width + i) * 3 + c] = (int)(256.0f * clamp(sqrtf(pixel_color.values[c]), 0.0f, 0.999f));
+      for (int c = 0; c < 3; c++) {
+        float value = pixel_color.values[c];
+        value = clamp(sqrtf(value / camera->samples_per_pixel), 0.0f, 0.999f);
+        buffer[(j * camera->img_width + i) * 3 + c] = (int)(256.0f * value);
+      }
     }
   }
   fprintf(stderr, "\nDone\n");
