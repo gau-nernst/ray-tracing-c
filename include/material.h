@@ -1,31 +1,13 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
-#include "texture.h"
-#include "utils.h"
 #include "vec3.h"
 #include <stdbool.h>
 
+typedef struct Texture Texture;
 typedef struct Material Material;
-typedef struct HitRecord HitRecord;
-typedef struct Ray Ray;
 
-typedef struct MaterialVTable {
-  bool (*scatter)(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, PCG32 *rng);
-  float (*scatter_pdf)(Vec3 normal, Vec3 r_in, Vec3 r_out);
-  Vec3 (*emit)(const HitRecord *rec);
-} MaterialVTable;
-
-struct Material {
-  MaterialVTable *vtable;
-  Texture *albedo;
-  union {
-    float fuzz; // for metal
-    float eta;  // for dielectric
-  };
-};
-
-struct HitRecord {
+typedef struct HitRecord {
   Vec3 p;
   Vec3 normal;
   Material *material;
@@ -33,7 +15,29 @@ struct HitRecord {
   float u;
   float v;
   bool front_face;
+} HitRecord;
+
+typedef enum MaterialType {
+  SURFACE_NORMAL,
+  LAMBERTIAN,
+  METAL,
+  DIELECTRIC,
+  DIFFUSE_LIGHT,
+  ISOTROPIC,
+} MaterialType;
+
+struct Material {
+  MaterialType tag;
+  Texture *albedo;
+  union {
+    float fuzz; // for metal
+    float eta;  // for dielectric
+  };
 };
+
+bool Material_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, bool *skip_pdf, PCG32 *rng);
+float Material_scatter_pdf(const Material *mat, Vec3 normal, Vec3 r_in, Vec3 r_out);
+Vec3 Material_emit(const HitRecord *rec);
 
 void SurfaceNormal_init(Material *self);
 Material *SurfaceNormal_new();

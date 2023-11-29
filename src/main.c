@@ -1,6 +1,7 @@
 #include "hittable.h"
 #include "material.h"
 #include "raytracing.h"
+#include "texture.h"
 #include "tiff.h"
 #include "utils.h"
 #include <time.h>

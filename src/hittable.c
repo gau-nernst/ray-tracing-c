@@ -1,7 +1,7 @@
 #include "hittable.h"
 #include "material.h"
 #include "pcg32.h"
-#include "vec3.h"
+#include "utils.h"
 #include <math.h>
 
 Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
