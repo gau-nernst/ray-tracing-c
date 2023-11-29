@@ -1,6 +1,7 @@
 #include "material.h"
 #include "texture.h"
 #include "utils.h"
+#include "vec3.h"
 #include <math.h>
 
 static Vec3 _Texture_value(const HitRecord *rec) {
@@ -49,7 +50,11 @@ static bool Metal_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *co
   *r_out = vec3_add(reflected, vec3_mul(vec3_rand_unit_vector(rng), rec->material->fuzz));
   *color = _Texture_value(rec);
   *skip_pdf = true;
-  return vec3_dot(*r_out, rec->normal) > 0.0f; // check for degeneration
+  // fuzzy reflection done by Shirley's book is not quite correct...
+  // return vec3_dot(*r_out, rec->normal) > 0.0f; // check for degeneration
+  if (vec3_dot(*r_out, rec->normal) < 0.0f)
+    *r_out = reflected;
+  return true;
 }
 void Metal_init(Material *self, Texture *albedo, float fuzz) { *self = (Material){METAL, albedo, .fuzz = fuzz}; }
 Material *Metal_new(Texture *albedo, float fuzz) define_material_new(Metal, albedo, fuzz);
@@ -98,7 +103,6 @@ Material *Isotropic_new(Texture *albedo) define_material_new(Isotropic, albedo);
 bool Material_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, bool *skip_pdf, PCG32 *rng) {
   switch (rec->material->tag) {
   case SURFACE_NORMAL:
-    *color = vec3float_mul(vec3_add(rec->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
     *skip_pdf = true;
     return false;
   case LAMBERTIAN:
@@ -127,9 +131,14 @@ float Material_scatter_pdf(const Material *mat, Vec3 normal, Vec3 r_in, Vec3 r_o
 }
 
 Vec3 Material_emit(const HitRecord *rec) {
-  if (rec->material->tag == DIFFUSE_LIGHT)
+  switch (rec->material->tag) {
+  case SURFACE_NORMAL:
+    return vec3_mul(vec3_add(rec->normal, 1.0f), 0.5f); // [-1,1] -> [0,1]
+  case DIFFUSE_LIGHT:
     return rec->front_face ? _Texture_value(rec) : VEC3_ZERO;
-  return VEC3_ZERO;
+  default:
+    return VEC3_ZERO;
+  }
 }
 
 Vec3 ONB_local(const ONB *self, Vec3 a) {
