@@ -23,10 +23,7 @@ void scene_metal_and_lambertian(World *world, Camera *camera) {
   mat = Metal_new(Solid_new(vec3(0.8, 0.6, 0.2)), 1.0);
   HittableList_append(&world->objects, Sphere_new(vec3(1, 0, -1), 0.5, mat));
 
-  camera->vfov = 90.0f;
-  camera->background = vec3(0.7, 0.8, 1);
-  camera->look_from = VEC3_ZERO;
-  camera->look_to = vec3(0, 0, -1);
+  Camera_init(camera, vec3(0.7, 0.8, 1), 90, 10, VEC3_ZERO, vec3(0, 0, -1), 0);
 }
 
 void scene_book1_final(World *world, Camera *camera) {
@@ -77,11 +74,7 @@ void scene_book1_final(World *world, Camera *camera) {
   HittableList_init(&world->objects, 1);
   HittableList_append(&world->objects, bvh);
 
-  camera->vfov = 20.0f;
-  camera->background = vec3(0.7, 0.8, 1);
-  camera->look_from = vec3(13, 2, 3);
-  camera->look_to = VEC3_ZERO;
-  camera->dof_angle = 0.6f;
+  Camera_init(camera, vec3(0.7, 0.8, 1), 20, 10, vec3(13, 2, 3), VEC3_ZERO, 0.6);
 }
 
 void scene_checker(World *world, Camera *camera) {
@@ -92,10 +85,7 @@ void scene_checker(World *world, Camera *camera) {
   HittableList_append(&world->objects, Sphere_new(vec3(0, -10, 0), 10, mat));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 10, 0), 10, mat));
 
-  camera->vfov = 20.0f;
-  camera->background = vec3(0.7, 0.8, 1);
-  camera->look_from = vec3(13, 2, 3);
-  camera->look_to = VEC3_ZERO;
+  Camera_init(camera, vec3(0.7, 0.8, 1), 20, 10, vec3(13, 2, 3), VEC3_ZERO, 0.0);
 }
 
 void scene_earth(World *world, Camera *camera) {
@@ -104,10 +94,7 @@ void scene_earth(World *world, Camera *camera) {
   Material *mat = Lambertian_new(Image_new("earthmap.jpg"));
   HittableList_append(&world->objects, Sphere_new(VEC3_ZERO, 2, mat));
 
-  camera->vfov = 20.0f;
-  camera->background = vec3(0.7, 0.8, 1);
-  camera->look_from = vec3(13, 2, 3);
-  camera->look_to = VEC3_ZERO;
+  Camera_init(camera, vec3(0.7, 0.8, 1), 20, 10, vec3(13, 2, 3), VEC3_ZERO, 0.0);
 }
 
 void scene_perlin(World *world, Camera *camera) {
@@ -120,12 +107,7 @@ void scene_perlin(World *world, Camera *camera) {
   HittableList_append(&world->objects, Sphere_new(vec3(0, -1000, 0), 1000, mat));
   HittableList_append(&world->objects, Sphere_new(vec3(0, 2, 0), 2, mat));
 
-  camera->vfov = 20.0f;
-  camera->background = vec3(0.7, 0.8, 1);
-  camera->look_from = vec3(13, 2, 3);
-  camera->look_to = VEC3_ZERO;
-  camera->dof_angle = 0.0f;
-  camera->focal_length = 10.0f;
+  Camera_init(camera, vec3(0.7, 0.8, 1), 20, 10, vec3(13, 2, 3), VEC3_ZERO, 0.0);
 }
 
 void scene_simple_light(World *world, Camera *camera) {
@@ -148,10 +130,7 @@ void scene_simple_light(World *world, Camera *camera) {
   HittableList_append(&world->objects, light_src);
   HittableList_append(&world->lights, light_src);
 
-  camera->vfov = 20.0f;
-  camera->background = VEC3_ZERO;
-  camera->look_from = vec3(26, 3, 6);
-  camera->look_to = vec3(0, 2, 0);
+  Camera_init(camera, VEC3_ZERO, 20, 10, vec3(26, 3, 6), vec3(0, 2, 0), 0.0);
 }
 
 void scene_cornell_box(World *world, Camera *camera) {
@@ -182,11 +161,7 @@ void scene_cornell_box(World *world, Camera *camera) {
   box2 = Translate_new(box2, vec3(130, 0, 65));
   HittableList_append(&world->objects, box2);
 
-  camera->aspect_ratio = 1.0f;
-  camera->background = vec3(0, 0, 0);
-  camera->vfov = 40.0f;
-  camera->look_from = vec3(278, 278, -800);
-  camera->look_to = vec3(278, 278, 0);
+  Camera_init(camera, VEC3_ZERO, 40, 10, vec3(278, 278, -800), vec3(278, 278, 0), 0.0);
 }
 
 void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
@@ -265,31 +240,26 @@ void scene_book2_final(World *world, Camera *camera, bool enable_bvh) {
   boxes2 = Translate_new(boxes2, vec3(-100, 270, 395));
   HittableList_append(&world->objects, boxes2);
 
-  camera->aspect_ratio = 1.0f;
-  camera->background = VEC3_ZERO;
-  camera->vfov = 40.0f;
-  camera->look_from = vec3(478, 278, -600);
-  camera->look_to = vec3(278, 278, 0);
+  Camera_init(camera, VEC3_ZERO, 40, 10, vec3(478, 278, -600), vec3(278, 278, 0), 0.0);
 }
 
 int main(int argc, char *argv[]) {
   assert(argc > 1);
 
-  World world = {0};
-  Camera camera;
-  camera.aspect_ratio = 16.0f / 9.0f;
-  camera.img_width = 500;
-  camera.samples_per_pixel = 100;
-  camera.max_depth = 50;
-  camera.vup = vec3(0, 1, 0);
-  camera.dof_angle = 0.0f;
-  camera.focal_length = 10.0f;
-  camera.lights_sampling_prob = 0.5f;
+  float aspect_ratio = 16.0f / 9.0f;
+  int img_width = 500;
+  int samples_per_pixel = 100;
+  int max_depth = 50;
+  float lights_sampling_prob = 0.5f;
 
   if (argc > 3)
-    camera.img_width = strtol(argv[2], NULL, 10);
+    img_width = strtol(argv[2], NULL, 10);
   if (argc > 4)
-    camera.samples_per_pixel = strtol(argv[3], NULL, 10);
+    samples_per_pixel = strtol(argv[3], NULL, 10);
+
+  World world = {0};
+  Renderer renderer;
+  Camera camera;
 
   switch (strtol(argv[1], NULL, 10)) {
   default:
@@ -321,25 +291,27 @@ int main(int argc, char *argv[]) {
   case 6:
     fprintf(stderr, "Book 2: Cornell box\n");
     scene_cornell_box(&world, &camera);
+    aspect_ratio = 1.0f;
     break;
   case 7:
     fprintf(stderr, "Book 2: Final scene\n");
     scene_book2_final(&world, &camera, true);
+    aspect_ratio = 1.0f;
     break;
   }
-  Camera_init(&camera);
 
-  uint8_t *image = my_malloc(camera.img_width * camera.img_height * 3);
+  Renderer_init(&renderer, img_width, aspect_ratio, samples_per_pixel, max_depth, lights_sampling_prob);
+  uint8_t *image = my_malloc(renderer.img_width * renderer.img_height * 3);
 
   time_t start, stop;
   time(&start);
-  Camera_render(&camera, &world, image);
+  render(&renderer, &camera, &world, image);
   time(&stop);
   fprintf(stderr, "Took %ld seconds\n", stop - start);
 
   FILE *f = fopen("output.tiff", "wb");
   assert((f != NULL) && "Failed to open file");
-  write_tiff(f, camera.img_width, camera.img_height, 3, image);
+  write_tiff(f, renderer.img_width, renderer.img_height, 3, image);
 
   return 0;
 }
