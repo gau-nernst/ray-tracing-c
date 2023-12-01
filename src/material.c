@@ -47,13 +47,16 @@ static Vec3 reflect(Vec3 incident, Vec3 normal) {
 }
 static bool Metal_scatter(const HitRecord *rec, Vec3 r_in, Vec3 *r_out, Vec3 *color, bool *skip_pdf, PCG32 *rng) {
   Vec3 reflected = reflect(vec3_normalize(r_in), rec->normal);
-  *r_out = vec3_add(reflected, vec3_mul(vec3_rand_unit_vector(rng), rec->material->fuzz));
+
+  // fuzzy reflection done by Shirley's book is not quite correct...
+  // we do rejection sampling here instead
+  for (;;) {
+    *r_out = vec3_add(reflected, vec3_mul(vec3_rand_unit_vector(rng), rec->material->fuzz));
+    if (vec3_dot(*r_out, rec->normal) >= 0.0f)
+      break;
+  }
   *color = _Texture_value(rec);
   *skip_pdf = true;
-  // fuzzy reflection done by Shirley's book is not quite correct...
-  // return vec3_dot(*r_out, rec->normal) > 0.0f; // check for degeneration
-  if (vec3_dot(*r_out, rec->normal) < 0.0f)
-    *r_out = reflected;
   return true;
 }
 void Metal_init(Material *self, Texture *albedo, float fuzz) { *self = (Material){METAL, albedo, .fuzz = fuzz}; }
