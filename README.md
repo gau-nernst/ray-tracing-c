@@ -38,6 +38,10 @@ Book 1 final scene. 2min 34s on Macbook Air M1, plugged in, with OpenMP and BVH.
 
 ![Book 1 final scene](images/book1_final.png)
 
+Book 2 final scene. 11min 10s on Macbook Air M1, plugged in, with OpenMP, BVH, and importance sampling. 1000x1000. 1000 samples/pixel. max depth 50.
+
+![Book 2 final scene](images/book2_final.png)
+
 ## Learnings
 
 **Implement `Vec3`**:
