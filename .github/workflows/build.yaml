@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      - run: brew install libomp
       - run: make main CC=$(brew --prefix llvm@15)/bin/clang LDFLAGS+=-L$(brew --prefix libomp)/lib ${{ matrix.options }}
       - run: ./main 1
       - run: ./main 4
