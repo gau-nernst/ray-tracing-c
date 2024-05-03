@@ -3,7 +3,7 @@
 #include "vec3.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "external/stb_image.h"
+#include "stb_image.h"
 
 static Vec3 Solid_value(const Texture *self_, float u, float v, Vec3 p) { return ((Solid *)self_)->color; }
 void Solid_init(Solid *self, Vec3 color) { *self = (Solid){{Solid_value}, color}; }

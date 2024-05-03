@@ -1,4 +1,4 @@
-CFLAGS += -std=c11 -Wall -Ofast -MMD -MP -Iinclude
+CFLAGS += -std=c11 -Wall -Ofast -MMD -MP -Iinclude -Istb
 LDLIBS += -lm
 
 ifdef ENABLE_OPENMP
@@ -12,11 +12,6 @@ DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 -include $(DEPENDS)  # re-compile when headers change
 
 $(shell mkdir -p obj)
-
-include/external/stb_image.h:
-	wget https://github.com/nothings/stb/raw/master/stb_image.h -P include/external
-
-src/material.c: include/external/stb_image.h
 
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
