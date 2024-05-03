@@ -15,6 +15,8 @@ make main ENABLE_OPENMP=1  # for OpenMP support
 ./main 0
 ```
 
+The output is `output.tiff`. There are 8 scenes in total. Change `0` to `0-7` (inclusive) to select other scenes.
+
 On MacOS, Apple Clang does not support OpenMP. Install LLVM from Homebrew to build with OpenMP.
 
 ```bash
