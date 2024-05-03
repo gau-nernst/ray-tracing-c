@@ -10,6 +10,8 @@ Other Ray Tracing in One Weekend repos:
 On Linux and macOS
 
 ```bash
+git clone --recursive https://github.com/gau-nernst/ray-tracing-c.git
+cd ray-tracing-c
 make main
 make main ENABLE_OPENMP=1  # for OpenMP support
 ./main 0
@@ -27,6 +29,8 @@ make main CC=$(brew --prefix llvm)/bin/clang ENABLE_OPENMP=1
 On Windows
 
 ```bash
+git clone --recursive https://github.com/gau-nernst/ray-tracing-c.git
+cd ray-tracing-c
 cl /Iinclude /Istb /Zc:preprocessor /std:c11 /O2 /fp:fast /Femain.exe src/*.c
 cl /Iinclude /Istb /Zc:preprocessor /std:c11 /O2 /fp:fast /openmp /Femain.exe src/*.c  # for OpenMP support
 ./main.exe 0
