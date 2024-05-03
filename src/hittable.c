@@ -4,7 +4,7 @@
 #include "utils.h"
 #include <math.h>
 
-Vec3 ray_at(const Ray *ray, float t) { return vec3vec3_add(ray->origin, vec3float_mul(ray->direction, t)); }
+Vec3 ray_at(const Ray *ray, float t) { return vec3_add_vec3(ray->origin, vec3_mul_float(ray->direction, t)); }
 
 const static AABB AABB_EMPTY = {{{INFINITY, -INFINITY}, {INFINITY, -INFINITY}, {INFINITY, -INFINITY}}};
 static AABB AABB_from_Vec3(Vec3 a, Vec3 b) {

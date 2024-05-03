@@ -6,14 +6,18 @@ const Vec3 VEC3_ZERO = {{0.0f, 0.0f, 0.0f}};
 Vec3 vec3(float x, float y, float z) { return (Vec3){.x = x, .y = y, .z = z}; }
 Vec3 *Vec3_new(float x, float y, float z) define_struct_new(Vec3, .x = x, .y = y, .z = z);
 Vec3 vec3_neg(Vec3 u) { return vec3(-u.x, -u.y, -u.z); }
-Vec3 vec3vec3_add(Vec3 u, Vec3 v) { return vec3(u.x + v.x, u.y + v.y, u.z + v.z); }
-Vec3 vec3vec3_sub(Vec3 u, Vec3 v) { return vec3(u.x - v.x, u.y - v.y, u.z - v.z); }
-Vec3 vec3vec3_mul(Vec3 u, Vec3 v) { return vec3(u.x * v.x, u.y * v.y, u.z * v.z); }
-Vec3 vec3vec3_div(Vec3 u, Vec3 v) { return vec3(u.x / v.x, u.y / v.y, u.z / v.z); }
-Vec3 vec3float_add(Vec3 u, float v) { return vec3(u.x + v, u.y + v, u.z + v); }
-Vec3 vec3float_sub(Vec3 u, float v) { return vec3(u.x - v, u.y - v, u.z - v); }
-Vec3 vec3float_mul(Vec3 u, float v) { return vec3(u.x * v, u.y * v, u.z * v); }
-Vec3 vec3float_div(Vec3 u, float v) { return vec3_mul(u, 1.0f / v); }
+Vec3 vec3_inv(Vec3 u) { return vec3(1.0f / u.x, 1.0f / u.y, 1.0f / u.z); }
+
+Vec3 vec3_add_vec3(Vec3 u, Vec3 v) { return vec3(u.x + v.x, u.y + v.y, u.z + v.z); }
+Vec3 vec3_mul_vec3(Vec3 u, Vec3 v) { return vec3(u.x * v.x, u.y * v.y, u.z * v.z); }
+Vec3 vec3_sub_vec3(Vec3 u, Vec3 v) { return vec3_add_vec3(u, vec3_neg(v)); }
+Vec3 vec3_div_vec3(Vec3 u, Vec3 v) { return vec3_mul_vec3(u, vec3_inv(v)); }
+
+Vec3 vec3_add_float(Vec3 u, float v) { return vec3(u.x + v, u.y + v, u.z + v); }
+Vec3 vec3_mul_float(Vec3 u, float v) { return vec3(u.x * v, u.y * v, u.z * v); }
+Vec3 vec3_sub_float(Vec3 u, float v) { return vec3_add_float(u, -v); }
+Vec3 vec3_div_float(Vec3 u, float v) { return vec3_mul_float(u, 1.0f / v); }
+
 Vec3 vec3_lerp(Vec3 a, Vec3 b, float w) { return vec3_add(vec3_mul(a, 1.0f - w), vec3_mul(b, w)); }
 Vec3 vec3_min(Vec3 u, Vec3 v) { return vec3(fminf(u.x, v.x), fminf(u.y, v.y), fminf(u.z, v.z)); }
 Vec3 vec3_max(Vec3 u, Vec3 v) { return vec3(fmaxf(u.x, v.x), fmaxf(u.y, v.y), fmaxf(u.z, v.z)); }
